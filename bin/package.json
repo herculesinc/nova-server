@@ -1,0 +1,41 @@
+{
+  "name": "nova-server",
+  "version": "0.1.0",
+  "description": "Action-based Web API framework written in TypeScript",
+  "keywords": [
+    "nova",
+    "restful",
+    "rest",
+    "action",
+    "api",
+    "web",
+    "framework",
+    "socket"
+  ],
+  "main": "index.js",
+  "license": "MIT",
+  "author": {
+    "name": "Credo360, Inc.",
+    "email": "developers@credo360.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/herculesinc/nova-base.git"
+  },
+  "engines": {
+    "node": "6.3.x"
+  },
+  "dependencies": {
+    "body-parser": "1.15.x",
+    "express": "4.14.x",
+    "multer": "1.1.x",
+    "nova-base": "0.1.0",
+    "response-time": "2.3.x"
+  },
+  "devDependencies": {
+    "del": "2.2.x",
+    "gulp": "3.9.x",
+    "gulp-mocha": "2.2.x",
+    "gulp-util": "3.0.x"
+  }
+}

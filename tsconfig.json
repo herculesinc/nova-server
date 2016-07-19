@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "target": "es2015",
+        "module": "commonjs",
+        "noEmitOnError": true,
+        "sourceMap": true,
+        "outDir": "bin"
+    }
+}
