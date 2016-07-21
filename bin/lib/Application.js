@@ -37,11 +37,12 @@ function createExecutorContext(options) {
         }
     };
     return {
+        authenticator: options.authenticator,
         database: options.database,
         cache: options.cache,
-        authenticator: options.authenticator,
         dispatcher: options.dispatcher,
         notifier: notifier,
+        limiter: options.limiter,
         logger: options.logger,
         settings: options.settings
     };

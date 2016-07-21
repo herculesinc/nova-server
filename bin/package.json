@@ -29,8 +29,9 @@
     "body-parser": "1.15.x",
     "express": "4.14.x",
     "multer": "1.1.x",
-    "nova-base": "0.1.0",
-    "response-time": "2.3.x"
+    "nova-base": "0.3.0",
+    "response-time": "2.3.x",
+    "socket.io": "1.4.x"
   },
   "devDependencies": {
     "del": "2.2.x",

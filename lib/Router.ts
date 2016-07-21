@@ -2,7 +2,7 @@
 // =================================================================================================
 import { 
     Action, ActionAdapter, Executor, ExecutorContext, ExecutionOptions, AuthInputs, RateOptions,
-    DaoOptions, HttpStatusCode, ClientError, validate
+    DaoOptions, HttpStatusCode, Exception, validate
 } from 'nova-base';
 import { Application as ExpressApp, RequestHandler, Request, Response } from 'express';
 import * as bodyParser from 'body-parser';
@@ -18,12 +18,12 @@ const BODY_TYPE_CHECKERS = {
     json: function(request: Request, response: Response, next: Function) {
         return !request.headers['content-type'] || request.is('json') !== false
             ? next()
-            : next(new ClientError(`Only JSON body is supported for this request`, HttpStatusCode.UnsupportedContent));
+            : next(new Exception(`Only JSON body is supported for this request`, HttpStatusCode.UnsupportedContent));
     },
     files: function(request: Request, response: Response, next: Function) {
         return request.is('multipart')
             ? next()
-            : next(new ClientError(`Only multipart body is supported for this request`, HttpStatusCode.UnsupportedContent));
+            : next(new Exception(`Only multipart body is supported for this request`, HttpStatusCode.UnsupportedContent));
     }
 };
 
@@ -31,7 +31,7 @@ const ACCPET_TYPE_CHECKER = {
     json: function(request: Request, response: Response, next: Function) {
         return request.accepts('json')
             ? next()
-            : next(new ClientError(`Only JSON response can be returned from this endpoint`, HttpStatusCode.NotAcceptable));
+            : next(new Exception(`Only JSON response can be returned from this endpoint`, HttpStatusCode.NotAcceptable));
     } 
 };
 
@@ -40,7 +40,7 @@ const ACCPET_TYPE_CHECKER = {
 type EndpointConfigOrHandler = EndpointConfig<any,any> | RequestHandler;
 
 export interface RouteConfig {
-    name    : string;
+    name?   : string;
     get?    : EndpointConfigOrHandler;
     post?   : EndpointConfigOrHandler;
     put?    : EndpointConfigOrHandler;
@@ -60,7 +60,8 @@ export interface EndpointConfig<V,T> {
     response?       : ResponseOptions<T> | ViewBuilder<T>;
     body?           : JsonBodyOptions | FileBodyOptions;
     rate?           : RateOptions;
-    connection?     : DaoOptions;
+    dao?            : DaoOptions;
+    auth?           : any;
 }
 
 interface RequestBodyOptions {
@@ -99,13 +100,15 @@ interface CorsOptions {
 // =================================================================================================
 export class Router {
     
+    name    : string;
     root    : string;
     context : ExecutorContext;
     routes  : Map<string, RouteConfig>;
     
     // CONSTRUCTOR
     // --------------------------------------------------------------------------------------------
-    constructor() {
+    constructor(name?: string) {
+        this.name = name;
         this.routes = new Map<string, RouteConfig>();
     }
     
@@ -173,7 +176,7 @@ export class Router {
             // catch unsupported method requests
             server.all(this.root, function(request: Request, response: Response, next: Function) {
                 const message = `Method ${request.method} is not allowed for ${request.baseUrl}`;
-                next(new ClientError(message, HttpStatusCode.NotAllowed));
+                next(new Exception(message, HttpStatusCode.NotAllowed));
             });
         }
     }
@@ -185,13 +188,12 @@ export class Router {
         if (typeof configOrHandler === 'function') return [configOrHandler];
 
         const config = configOrHandler;
-        const rateLimiter = this.context.limiter;
 
         // make sure transactions are started for non-readonly handlers
         const options: ExecutionOptions = {
-            daoOptions  : Object.assign({}, config.connection, { startTransaction: !readonly }),
-            rateOptions : config.rate,
-            authOptions : undefined // TODO: add?
+            daoOptions  : Object.assign({}, config.dao, { startTransaction: !readonly }),
+            rateOptions : config.rate,  // TODO: get default options from somewhere?
+            authOptions : config.auth
         };
 
         // attach type checkers and body parser
@@ -215,36 +217,31 @@ export class Router {
                 validate.inputs(!selector || executor, `No actions found for the specified ${selector}`);
 
                 // check authorization header
-                let authInputs: AuthInputs = undefined;
+                let requestor: AuthInputs | string;
                 const authHeader = request.headers['authorization'];
                 if (authHeader) {
                     // if header is present, build auth inputs
                     const authParts = authHeader.split(' ');
                     validate.inputs(authParts.length === 2, 'Invalid authorization header');
-                    authInputs = {
+                    requestor = {
                         scheme      : authParts[0],
                         credentials : authParts[1]
                     };
                 }
-                else if (rateLimiter && config.rate) {
-                    // TODO: move rate limit checking into Executor
-                    // if there is no authorization header, check rate limit based on IP address
-                    //const rateId = `${request.method}::${request.baseUrl}::${request.ip}`;
-                    //const retryAfter = await rateLimiter.try(rateId, config.rate);
-                    //if (retryAfter) {
-                    //    throw new TooManyRequestsError(`Rate limit exceeded for ${request.baseUrl}`, retryAfter);
-                    //}
+                else {
+                    // otherwise, set requestor to the IP address of the request
+                    requestor = request.ip;
                 }
 
                 // execute the action
-                const result = await executor.execute(inputs, authInputs);
+                const result = await executor.execute(inputs, requestor);
 
                 // build response
                 if (config.response) {
                     const view = typeof config.response === 'function'
                         ? config.response(result)
                         : config.response.view(result, config.response.options);
-                    if (!view) throw new ClientError('Resource not found', HttpStatusCode.NotFound);
+                    if (!view) throw new Exception('Resource not found', HttpStatusCode.NotFound);
                     response.json(view);
                 }
                 else {

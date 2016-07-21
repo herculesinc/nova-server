@@ -3,6 +3,8 @@ declare module "nova-server" {
     // IMPORTS AND RE-EXPORTS
     // --------------------------------------------------------------------------------------------    
     import * as http from 'http';
+    import * as events from 'events';
+    import * as socketio from 'socket.io';
     import { RequestHandler } from 'express';
     import * as nova from 'nova-base';
 
@@ -10,10 +12,11 @@ declare module "nova-server" {
 
     // APPLICATION
     // --------------------------------------------------------------------------------------------
-    export interface AppConfig {
+    export interface AppConfig extends events.EventEmitter {
         name            : string;
         version         : string;
         server          : http.Server;
+        sockets         : socketio.Server;
         authenticator   : nova.Authenticator;
         database        : nova.Database;
         cache           : nova.Cache;
@@ -21,11 +24,25 @@ declare module "nova-server" {
         logger?         : nova.Logger;
         limiter?        : nova.RateLimiter;
         settings?       : any;
-        errorHandler?   : any;
+
+        options?: {
+            trustProxy      : boolean;
+            versionHeader   : boolean;
+            socketAuthEvent : string;
+            tooBusyParams   : string;
+            errorsToLog     : any;
+            reateLimits     : any;
+        }
     }
 
     export interface Application {
-        attach(path: string, router: Router);
+        name    : string;
+        version : string;
+
+        register(root: string, router: Router);
+        register(nsps: string, listener: Listener);
+
+        on(event: 'error', callback: (error: Error) => void);
     }
 
     // ROUTER
@@ -92,6 +109,22 @@ declare module "nova-server" {
         headers     : string[];
         credentials : string;
         maxAge      : string;
+    }
+
+    // LISTENER
+    // --------------------------------------------------------------------------------------------
+    export class Listener {
+        constructor(name?: string);
+        on<V,T>(event: string, config: SocketHandlerConfig<V,T>);
+    }
+
+    export interface SocketHandlerConfig<V,T> {
+        defaults?       : any;
+        adapter?        : nova.ActionAdapter<V>;
+        action          : nova.Action<V,T>;
+        rate?           : nova.RateOptions;
+        dao?            : nova.DaoOptions;
+        auth?           : any;
     }
 
     // PUBLIC FUNCTIONS

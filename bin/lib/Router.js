@@ -20,19 +20,19 @@ const BODY_TYPE_CHECKERS = {
     json: function (request, response, next) {
         return !request.headers['content-type'] || request.is('json') !== false
             ? next()
-            : next(new nova_base_1.ClientError(`Only JSON body is supported for this request`, nova_base_1.HttpStatusCode.UnsupportedContent));
+            : next(new nova_base_1.Exception(`Only JSON body is supported for this request`, 415 /* UnsupportedContent */));
     },
     files: function (request, response, next) {
         return request.is('multipart')
             ? next()
-            : next(new nova_base_1.ClientError(`Only multipart body is supported for this request`, nova_base_1.HttpStatusCode.UnsupportedContent));
+            : next(new nova_base_1.Exception(`Only multipart body is supported for this request`, 415 /* UnsupportedContent */));
     }
 };
 const ACCPET_TYPE_CHECKER = {
     json: function (request, response, next) {
         return request.accepts('json')
             ? next()
-            : next(new nova_base_1.ClientError(`Only JSON response can be returned from this endpoint`, nova_base_1.HttpStatusCode.NotAcceptable));
+            : next(new nova_base_1.Exception(`Only JSON response can be returned from this endpoint`, 406 /* NotAcceptable */));
     }
 };
 // CLASS DEFINITION
@@ -40,7 +40,8 @@ const ACCPET_TYPE_CHECKER = {
 class Router {
     // CONSTRUCTOR
     // --------------------------------------------------------------------------------------------
-    constructor() {
+    constructor(name) {
+        this.name = name;
         this.routes = new Map();
     }
     // PUBLIC METHODS
@@ -96,7 +97,7 @@ class Router {
             // catch unsupported method requests
             server.all(this.root, function (request, response, next) {
                 const message = `Method ${request.method} is not allowed for ${request.baseUrl}`;
-                next(new nova_base_1.ClientError(message, nova_base_1.HttpStatusCode.NotAllowed));
+                next(new nova_base_1.Exception(message, 405 /* NotAllowed */));
             });
         }
     }
@@ -108,12 +109,11 @@ class Router {
         if (typeof configOrHandler === 'function')
             return [configOrHandler];
         const config = configOrHandler;
-        const rateLimiter = this.context.limiter;
         // make sure transactions are started for non-readonly handlers
         const options = {
-            daoOptions: Object.assign({}, config.connection, { startTransaction: !readonly }),
+            daoOptions: Object.assign({}, config.dao, { startTransaction: !readonly }),
             rateOptions: config.rate,
-            authOptions: undefined // TODO: add?
+            authOptions: config.auth
         };
         // attach type checkers and body parser
         const expectsResponse = (config.response != undefined);
@@ -133,32 +133,34 @@ class Router {
                     const executor = executorMap.get(inputs[selector]);
                     nova_base_1.validate.inputs(!selector || executor, `No actions found for the specified ${selector}`);
                     // check authorization header
-                    let authInputs = undefined;
+                    let requestor;
                     const authHeader = request.headers['authorization'];
                     if (authHeader) {
                         // if header is present, build auth inputs
                         const authParts = authHeader.split(' ');
                         nova_base_1.validate.inputs(authParts.length === 2, 'Invalid authorization header');
-                        authInputs = {
+                        requestor = {
                             scheme: authParts[0],
                             credentials: authParts[1]
                         };
                     }
-                    else if (rateLimiter && config.rate) {
+                    else {
+                        // otherwise, set requestor to the IP address of the request
+                        requestor = request.ip;
                     }
                     // execute the action
-                    const result = yield executor.execute(inputs, authInputs);
+                    const result = yield executor.execute(inputs, requestor);
                     // build response
                     if (config.response) {
                         const view = typeof config.response === 'function'
                             ? config.response(result)
                             : config.response.view(result, config.response.options);
                         if (!view)
-                            throw new nova_base_1.ClientError('Resource not found', nova_base_1.HttpStatusCode.NotFound);
+                            throw new nova_base_1.Exception('Resource not found', 404 /* NotFound */);
                         response.json(view);
                     }
                     else {
-                        response.sendStatus(nova_base_1.HttpStatusCode.NoContent);
+                        response.sendStatus(204 /* NoContent */);
                     }
                 }
                 catch (error) {
