@@ -3,6 +3,8 @@ const nova_base_1 = require('nova-base');
 // MODULE VARIABLES
 // =================================================================================================
 const symSocketAuthInputs = Symbol();
+const CONNECT_EVENT = 'connection';
+const AUTH_EVENT = 'authenticate';
 // CLASS DEFINITION
 // =================================================================================================
 class Listener {
@@ -33,9 +35,9 @@ class Listener {
         this.authExecutor = new nova_base_1.Executor(this.context, authenticateSocket, socketAuthAdapter);
         // attach event handlers to the socket
         // TODO: get the right namespace based on topic
-        server.on('connection', (socket) => {
+        server.on(CONNECT_EVENT, (socket) => {
             // attach the authenticator handler
-            socket.on('authenticate', this.buildAuthHandler(socket));
+            socket.on(AUTH_EVENT, this.buildAuthHandler(socket));
             // attach all other handlers
             for (let [event, config] of this.handlers) {
                 socket.on(event, this.buildEventHandler(config, socket));

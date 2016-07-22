@@ -10,6 +10,9 @@ import {
 // =================================================================================================
 const symSocketAuthInputs = Symbol();
 
+const CONNECT_EVENT = 'connection';
+const AUTH_EVENT = 'authenticate';
+
 // INTERFACES
 // =================================================================================================
 export interface HandlerConfig<V,T> {
@@ -64,10 +67,10 @@ export class Listener {
 
         // attach event handlers to the socket
         // TODO: get the right namespace based on topic
-        server.on('connection', (socket) => {
+        server.on(CONNECT_EVENT, (socket) => {
             
             // attach the authenticator handler
-            socket.on('authenticate', this.buildAuthHandler(socket));
+            socket.on(AUTH_EVENT, this.buildAuthHandler(socket));
 
             // attach all other handlers
             for (let [event, config] of this.handlers) {

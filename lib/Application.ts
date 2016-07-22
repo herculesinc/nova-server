@@ -5,6 +5,7 @@ import * as https from 'https';
 import * as express from 'express';
 import * as socketio from 'socket.io';
 import * as responseTime from 'response-time';
+import * as toobusy from 'toobusy-js';
 import {
     Executor, ExecutorContext, Database, Cache, Dispatcher, Authenticator, RateLimiter, Logger
 } from 'nova-base';
@@ -57,6 +58,9 @@ export class Application {
         // create router and listener maps
         this.routers = new Map();
         this.listeners = new Map();
+
+        // 
+        
     }
     
     // PUBLIC METHODS

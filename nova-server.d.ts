@@ -3,6 +3,7 @@ declare module "nova-server" {
     // IMPORTS AND RE-EXPORTS
     // --------------------------------------------------------------------------------------------    
     import * as http from 'http';
+    import * as https from 'https';
     import * as events from 'events';
     import * as socketio from 'socket.io';
     import { RequestHandler } from 'express';
@@ -12,11 +13,18 @@ declare module "nova-server" {
 
     // APPLICATION
     // --------------------------------------------------------------------------------------------
-    export interface AppConfig extends events.EventEmitter {
+    export interface AppConfig {
         name            : string;
         version         : string;
-        server          : http.Server;
-        sockets         : socketio.Server;
+        webServer: {
+            server      : http.Server | https.Server;
+            trustProxy? : boolean | string | number;
+            poweredBy?  : boolean;
+            apiVersion? : boolean;
+        };
+        webSockets: {
+            server      : socketio.Server;
+        };
         authenticator   : nova.Authenticator;
         database        : nova.Database;
         cache           : nova.Cache;
@@ -26,15 +34,16 @@ declare module "nova-server" {
         settings?       : any;
 
         options?: {
-            trustProxy      : boolean;
-            versionHeader   : boolean;
-            tooBusyParams   : string;
-            errorsToLog     : any;
-            reateLimits     : any;
+            errorsToLog?: ErrorType;
+            reateLimits : any;
         }
     }
 
-    export interface Application {
+    export const enum ErrorType {
+        None = 0, Client = 1, Server = 2, All = 3
+    }
+
+    export interface Application extends events.EventEmitter {
         name    : string;
         version : string;
 
@@ -42,6 +51,7 @@ declare module "nova-server" {
         register(topic: string, listener: Listener);
 
         on(event: 'error', callback: (error: Error) => void);
+        on(event: 'lag', callback: (lag: number) => void);
     }
 
     // ROUTER
