@@ -115,20 +115,22 @@ export class Router {
     // PUBLIC METHODS
     // --------------------------------------------------------------------------------------------
     set(path: string, config: RouteConfig) {
+        if (!path) throw new Error('Path cannot be undefined');
+        if (!config) throw new Error('Route configuration cannot be undefined');
         if (this.routes.has(path))
             throw new Error(`Path {${path}} has already been bound to a handler`);
         this.routes.set(path, config);
     }
 
-    bind(root: string, server: ExpressApp, context: ExecutorContext) {
-        // check if the router has already been bound
+    attach(root: string, server: ExpressApp, context: ExecutorContext) {
+        // check if the router has already been attached
         if (this.root) throw new Error(`Router has alread been bound to ${this.root} root`);
 
         // initialize router variables
         this.root = root;
         this.context = context;
 
-        // bind route handlers to the server
+        // attach route handlers to the server
         for (let [subpath, config] of this.routes) {
             const methods = ['OPTIONS'];
             const fullpath = this.root + subpath;

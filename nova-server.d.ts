@@ -28,7 +28,6 @@ declare module "nova-server" {
         options?: {
             trustProxy      : boolean;
             versionHeader   : boolean;
-            socketAuthEvent : string;
             tooBusyParams   : string;
             errorsToLog     : any;
             reateLimits     : any;
@@ -40,7 +39,7 @@ declare module "nova-server" {
         version : string;
 
         register(root: string, router: Router);
-        register(nsps: string, listener: Listener);
+        register(topic: string, listener: Listener);
 
         on(event: 'error', callback: (error: Error) => void);
     }

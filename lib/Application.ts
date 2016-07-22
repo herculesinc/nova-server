@@ -1,20 +1,24 @@
 // IMPORTS
 // =================================================================================================
 import * as http from 'http';
+import * as https from 'https';
 import * as express from 'express';
+import * as socketio from 'socket.io';
 import * as responseTime from 'response-time';
 import {
     Executor, ExecutorContext, Database, Cache, Dispatcher, Authenticator, RateLimiter, Logger
 } from 'nova-base';
 
 import { Router } from './Router';
+import { Listener } from './Listener';
 
 // INTERFACES
 // =================================================================================================
 export interface AppOptions {
     name            : string;
     version         : string;
-    server          : http.Server;
+    webServer       : http.Server | https.Server;
+    ioServer        : socketio.Server;
     database        : Database;
     cache           : Cache;
     dispatcher      : Dispatcher;
@@ -22,39 +26,55 @@ export interface AppOptions {
     authenticator?  : Authenticator;
     limiter?        : RateLimiter;
     settings        : any;
-    errorHandler?   : ErrorHandler;
-}
-
-interface ErrorHandler {
-    (error: Error)  : Promise<any>;
 }
 
 // CLASS DEFINITION
 // =================================================================================================
 export class Application {
     
-    server  : express.Application;
-    options : AppOptions;
-    context : ExecutorContext;
-    routers : Map<string, Router>;
+    webServer   : express.Application;
+    ioServer    : socketio.Server;
+    options     : AppOptions;
+    context     : ExecutorContext;
+
+    routers     : Map<string, Router>;
+    listeners   : Map<string, Listener>;
 
     // CONSTRUCTOR
     // --------------------------------------------------------------------------------------------
     constructor(options: AppOptions) {
 
         this.options = validateOptions(options);
-        this.server = createExpressServer(this.options);
         this.context = createExecutorContext(this.options);
-        this.routers = new Map<string, Router>();
 
-        options.server.on('request', this.server); // TODO: improve
+        // initialize and bind web server
+        this.webServer = createExpressServer(this.options);
+        options.webServer.on('request', this.webServer);
+        
+        // initialize socket.io server
+        this.ioServer = undefined;
+
+        // create router and listener maps
+        this.routers = new Map();
+        this.listeners = new Map();
     }
     
     // PUBLIC METHODS
     // --------------------------------------------------------------------------------------------
-    attach(path: string, router: Router) {
-        if (this.routers.has(path)) throw Error(`Path {${path}} has already been bound to a router`);
-        router.bind(path, this.server, this.context);        
+    register(root: string, router: Router);
+    register(topic: string, listener: Listener)
+    register(path: string, routerOrListener: Router | Listener) {
+        if (!path) throw new Error('Cannot register router or listener: path is undefined');
+        if (!routerOrListener) throw new Error('Cannot register router or listener: router or listener is undefined');
+
+        if (routerOrListener instanceof Router) {
+            if (this.routers.has(path)) throw Error(`Path {${path}} has already been attached to a router`);
+            routerOrListener.attach(path, this.webServer, this.context);
+        }
+        else if (routerOrListener instanceof Listener) {
+            if (this.listeners.has(path)) throw Error(`Topic {${path}} has been already attached to a listener`);
+            routerOrListener.attach(path, this.ioServer, this.context);
+        }    
     }
 }
 

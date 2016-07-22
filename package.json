@@ -1,6 +1,6 @@
 {
   "name": "nova-server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Action-based Web API framework written in TypeScript",
   "keywords": [
     "nova",
@@ -13,6 +13,7 @@
     "socket"
   ],
   "main": "index.js",
+  "types": "nova-server.d.ts",
   "license": "MIT",
   "author": {
     "name": "Credo360, Inc.",

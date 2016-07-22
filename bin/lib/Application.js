@@ -1,6 +1,8 @@
 "use strict";
 const express = require('express');
 const responseTime = require('response-time');
+const Router_1 = require('./Router');
+const Listener_1 = require('./Listener');
 // CLASS DEFINITION
 // =================================================================================================
 class Application {
@@ -8,17 +10,31 @@ class Application {
     // --------------------------------------------------------------------------------------------
     constructor(options) {
         this.options = validateOptions(options);
-        this.server = createExpressServer(this.options);
         this.context = createExecutorContext(this.options);
+        // initialize and bind web server
+        this.webServer = createExpressServer(this.options);
+        options.webServer.on('request', this.webServer);
+        // initialize socket.io server
+        this.ioServer = undefined;
+        // create router and listener maps
         this.routers = new Map();
-        options.server.on('request', this.server); // TODO: improve
+        this.listeners = new Map();
     }
-    // PUBLIC METHODS
-    // --------------------------------------------------------------------------------------------
-    attach(path, router) {
-        if (this.routers.has(path))
-            throw Error(`Path {${path}} has already been bound to a router`);
-        router.bind(path, this.server, this.context);
+    register(path, routerOrListener) {
+        if (!path)
+            throw new Error('Cannot register router or listener: path is undefined');
+        if (!routerOrListener)
+            throw new Error('Cannot register router or listener: router or listener is undefined');
+        if (routerOrListener instanceof Router_1.Router) {
+            if (this.routers.has(path))
+                throw Error(`Path {${path}} has already been attached to a router`);
+            routerOrListener.attach(path, this.webServer, this.context);
+        }
+        else if (routerOrListener instanceof Listener_1.Listener) {
+            if (this.listeners.has(path))
+                throw Error(`Topic {${path}} has been already attached to a listener`);
+            routerOrListener.attach(path, this.ioServer, this.context);
+        }
     }
 }
 exports.Application = Application;
