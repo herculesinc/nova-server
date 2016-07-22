@@ -16,15 +16,8 @@ declare module "nova-server" {
     export interface AppConfig {
         name            : string;
         version         : string;
-        webServer: {
-            server      : http.Server | https.Server;
-            trustProxy? : boolean | string | number;
-            poweredBy?  : boolean;
-            apiVersion? : boolean;
-        };
-        webSockets: {
-            server      : socketio.Server;
-        };
+        webServer       : WebServerConfig;
+        ioServer        : IoServerConfig;
         authenticator   : nova.Authenticator;
         database        : nova.Database;
         cache           : nova.Cache;
@@ -34,13 +27,17 @@ declare module "nova-server" {
         settings?       : any;
 
         options?: {
-            errorsToLog?: ErrorType;
-            reateLimits : any;
+            reateLimits?: any;
         }
     }
 
-    export const enum ErrorType {
-        None = 0, Client = 1, Server = 2, All = 3
+    export interface WebServerConfig {
+        server      : http.Server | https.Server;
+        trustProxy? : boolean | string | number;
+    }
+
+    export interface IoServerConfig {
+        server      : socketio.Server;
     }
 
     export interface Application extends events.EventEmitter {

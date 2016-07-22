@@ -1,6 +1,6 @@
 // IMPORTS
 // ================================================================================================
-import { Application, AppOptions } from './lib/Application'
+import { Application, AppConfig } from './lib/Application'
 
 // MODULE VARIABLES
 // =================================================================================================
@@ -20,7 +20,7 @@ export const defaults = {
 
 // PUBLIC FUNCTIONS
 // ================================================================================================
-export function createApp(options: AppOptions): Application {
+export function createApp(options: AppConfig): Application {
     const app = new Application(options);
     return app;
 }
@@ -28,3 +28,4 @@ export function createApp(options: AppOptions): Application {
 // RE-EXPORTS
 // =================================================================================================
 export { Router } from './lib/Router';
+export { Listener } from './lib/Listener';

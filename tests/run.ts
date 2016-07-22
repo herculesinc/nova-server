@@ -1,6 +1,7 @@
 // IMPORTS
 // =================================================================================================
 import * as http from 'http';
+import * as socketio from 'socket.io';
 import { createApp, Router } from './../index';
 
 import * as actions from './actions';
@@ -15,6 +16,8 @@ import { MockLogger } from './mocks/Logger';
 // PERPARATIONS
 // =================================================================================================
 const server = http.createServer();
+
+const io = socketio(server);
 
 const router = new Router();
 router.set('/', {
@@ -31,13 +34,18 @@ router.set('/', {
 const app = createApp({
     name            : 'API Server',
     version         : '0.0.1',
-    webServer       : server,
-    ioServer        : undefined,
+    webServer: {
+        server      : server,
+        trustProxy  : true
+    },
+    ioServer: {
+        server      : io
+    },
+    authenticator   : authenticator,
     database        : new MockDatabase(),
     cache           : new MockCache(),
     dispatcher      : new MockDispatcher(),
     logger          : new MockLogger(),
-    authenticator   : authenticator,
     settings        : undefined
 });
 

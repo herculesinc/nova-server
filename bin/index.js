@@ -28,4 +28,6 @@ exports.createApp = createApp;
 // =================================================================================================
 var Router_1 = require('./lib/Router');
 exports.Router = Router_1.Router;
+var Listener_1 = require('./lib/Listener');
+exports.Listener = Listener_1.Listener;
 //# sourceMappingURL=index.js.map

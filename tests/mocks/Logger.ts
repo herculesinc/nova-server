@@ -6,21 +6,21 @@ import { Logger } from 'nova-base';
 // =================================================================================================
 export class MockLogger {
 
-    debug(message: string) { /*console.log(message);*/ }
-    info (message: string) { /*console.info(message);*/ }
-    warn(message: string) { /*console.warn(message);*/ }
+    debug(message: string) { console.log(message); }
+    info (message: string) { console.info(message); }
+    warn(message: string) { console.warn(message); }
 
-    error(error: Error) { /*console.error(error);*/ };
+    error(error: Error) { console.error(error); };
 
     log(event: string, properties?: { [key: string]: any }) {
-        // console.info(`${event}: ${JSON.stringify(properties)}`);
+         console.info(`${event}: ${JSON.stringify(properties)}`);
     }
 
     track(metric: string, value: number) {
-        // console.log(`[${metric}=${value}]`)
+        console.log(`[${metric}=${value}]`)
     }
 
     trace(service: string, command: string, time: number, success?: boolean) {
-        // console.log(`[${service}]: executed {${command}} in ${time} ms`)
+        console.log(`[${service}]: executed {${command}} in ${time} ms`)
     }
 }
