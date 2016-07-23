@@ -1,12 +1,14 @@
 "use strict";
 const events_1 = require('events');
 const express = require('express');
+const socketio = require('socket.io');
 const responseTime = require('response-time');
 const toobusy = require('toobusy-js');
 const nova_base_1 = require('nova-base');
 const Router_1 = require('./Router');
 const Listener_1 = require('./Listener');
 const SocketNotifier_1 = require('./SocketNotifier');
+const util_1 = require('./util');
 // MODULE VARIABLES
 // =================================================================================================
 const ERROR_EVENT = 'error';
@@ -29,6 +31,7 @@ class Application extends events_1.EventEmitter {
         this.name = options.name;
         this.version = options.version;
         // initialize servers
+        this.server = options.webServer.server;
         this.setWebServer(options.webServer);
         this.setIoServer(options.ioServer);
         // initlize context
@@ -36,6 +39,8 @@ class Application extends events_1.EventEmitter {
         // create router and listener maps
         this.endpointRouters = new Map();
         this.socketListeners = new Map();
+        // initialize auth executor
+        this.authExecutor = new nova_base_1.Executor(this.context, authenticateSocket, socketAuthAdapter);
         // set up lag handling
         toobusy.onLag((lag) => {
             this.emit(LAG_EVENT, lag);
@@ -55,9 +60,23 @@ class Application extends events_1.EventEmitter {
         else if (routerOrListener instanceof Listener_1.Listener) {
             if (this.socketListeners.has(path))
                 throw Error(`Topic {${path}} has been already attached to a listener`);
-            routerOrListener.attach(path, this.ioServer, this.context);
+            routerOrListener.attach(path, this.ioServer, this.context, (error) => {
+                this.emit(ERROR_EVENT, error);
+            });
             this.socketListeners.set(path, routerOrListener);
         }
+    }
+    start() {
+        // attach error handler
+        this.webServer.use((error, request, response, next) => {
+            // fire error event
+            this.emit(ERROR_EVENT, error);
+            // end response
+            response.status(error.status || 500 /* InternalServerError */);
+            response.json((error instanceof nova_base_1.Exception)
+                ? error
+                : { name: error.name, message: error.message });
+        });
     }
     // PRIVATE METHODS
     // --------------------------------------------------------------------------------------------
@@ -78,22 +97,34 @@ class Application extends events_1.EventEmitter {
             });
             next();
         });
-        // attach error handler
-        this.webServer.use((error, request, response, next) => {
-            // fire error event
-            this.emit(ERROR_EVENT, error);
-            // end response
-            response.status(error.status || 500 /* InternalServerError */);
-            response.json((error instanceof nova_base_1.Exception)
-                ? error
-                : { name: error.name, message: error.message });
-        });
         // bind express app to the server
         options.server.on('request', this.webServer);
     }
     setIoServer(options) {
-        // not much to do here - yet
-        this.ioServer = options.server;
+        // create the socket IO server
+        this.ioServer = socketio(this.server, options);
+        // attach socket authentication middleware
+        this.ioServer.use((socket, next) => {
+            try {
+                const query = socket.handshake.query;
+                const authInputs = util_1.parseAuthHeader(query['authorization'] || query['Authorization']);
+                this.authExecutor.execute({ authenticator: this.context.authenticator }, authInputs)
+                    .then((socketOwnerId) => {
+                    socket.join(socketOwnerId, function () {
+                        socket[Listener_1.symSocketAuthInputs] = authInputs;
+                        next();
+                    });
+                })
+                    .catch((error) => {
+                    this.emit(ERROR_EVENT, error);
+                    next(error);
+                });
+            }
+            catch (error) {
+                this.emit(ERROR_EVENT, error);
+                next(error);
+            }
+        });
     }
     setExecutorContext(options) {
         // build notifier
@@ -117,5 +148,13 @@ exports.Application = Application;
 function validateOptions(options) {
     // TODO: validate options
     return options;
+}
+function socketAuthAdapter(inputs, authInfo) {
+    // convert auth info to the owner string
+    return Promise.resolve(inputs.authenticator.toOwner(authInfo));
+}
+function authenticateSocket(inputs) {
+    // just a pass-through action
+    return Promise.resolve(inputs);
 }
 //# sourceMappingURL=Application.js.map

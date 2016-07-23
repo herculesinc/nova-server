@@ -1,10 +1,10 @@
 "use strict";
+const toobusy = require('toobusy-js');
 const nova_base_1 = require('nova-base');
 // MODULE VARIABLES
 // =================================================================================================
-const symSocketAuthInputs = Symbol();
+exports.symSocketAuthInputs = Symbol();
 const CONNECT_EVENT = 'connection';
-const AUTH_EVENT = 'authenticate';
 // CLASS DEFINITION
 // =================================================================================================
 class Listener {
@@ -25,49 +25,24 @@ class Listener {
             throw new Error(`Event {${event}} has already been bound to a handler`);
         this.handlers.set(event, config);
     }
-    attach(topic, server, context) {
+    attach(topic, io, context, errorHandler) {
         // check if the listener has already been attached
         if (this.topic)
             throw new Error(`Listener has alread been bound to ${this.topic} topic`);
         // initialize listener variables
         this.topic = topic;
         this.context = context;
-        this.authExecutor = new nova_base_1.Executor(this.context, authenticateSocket, socketAuthAdapter);
         // attach event handlers to the socket
-        // TODO: get the right namespace based on topic
-        server.on(CONNECT_EVENT, (socket) => {
-            // attach the authenticator handler
-            socket.on(AUTH_EVENT, this.buildAuthHandler(socket));
-            // attach all other handlers
+        io.of(topic).on(CONNECT_EVENT, (socket) => {
+            // attach event handlers handlers
             for (let [event, config] of this.handlers) {
-                socket.on(event, this.buildEventHandler(config, socket));
+                socket.on(event, this.buildEventHandler(config, socket, errorHandler));
             }
         });
     }
     // PRIVATE METHODS
     // --------------------------------------------------------------------------------------------
-    buildAuthHandler(socket) {
-        if (!socket)
-            return;
-        // set up variables
-        const executor = this.authExecutor;
-        const authenticator = this.context.authenticator;
-        // build authentication handler for the socket
-        return function (data, callback) {
-            executor.execute({ authenticator: authenticator }, data)
-                .then((socketOwnerId) => {
-                socket.join(socketOwnerId, function () {
-                    socket[symSocketAuthInputs] = data;
-                    callback(undefined);
-                });
-            })
-                .catch((error) => {
-                // TODO: log the error
-                callback(error);
-            });
-        };
-    }
-    buildEventHandler(config, socket) {
+    buildEventHandler(config, socket, errorHandler) {
         if (!config || !socket)
             return;
         // build execution options
@@ -80,24 +55,23 @@ class Listener {
         const executor = new nova_base_1.Executor(this.context, config.action, config.adapter, options);
         // build and return the handler
         return function (data, callback) {
+            // check if the server is too busy
+            if (toobusy()) {
+                const error = new nova_base_1.Exception('The server is too busy', 503 /* ServiceUnavailable */);
+                errorHandler(error);
+                return callback(error);
+            }
+            // build inputs and run the executor
             const inputs = Object.assign({}, config.defaults, data);
-            const authInputs = undefined; // TODO: get auth data from socket
+            const authInputs = socket[exports.symSocketAuthInputs];
             executor.execute(inputs, authInputs)
                 .then((result) => callback(undefined))
                 .catch((error) => {
-                // TODO: log the error
+                errorHandler(error);
                 callback(error);
             });
         };
     }
 }
 exports.Listener = Listener;
-function socketAuthAdapter(inputs, authInfo) {
-    // convert auth info to the owner string
-    return Promise.resolve(inputs.authenticator.toOwner(authInfo));
-}
-function authenticateSocket(inputs) {
-    // just a pass-through action
-    return Promise.resolve(inputs);
-}
 //# sourceMappingURL=Listener.js.map

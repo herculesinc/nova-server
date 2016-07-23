@@ -2,7 +2,7 @@
 // =================================================================================================
 import * as http from 'http';
 import * as socketio from 'socket.io';
-import { createApp, Router } from './../index';
+import { createApp, Router, Listener } from './../index';
 
 import * as actions from './actions';
 import * as adapters from './adapters';
@@ -17,8 +17,6 @@ import { MockLogger } from './mocks/Logger';
 // =================================================================================================
 const server = http.createServer();
 
-const io = socketio(server);
-
 const router = new Router();
 router.set('/', {
     name            : 'root',
@@ -27,6 +25,12 @@ router.set('/', {
         action      : actions.helloWorldAction,
         response    : views.generateHelloWorldView
     }
+});
+
+const listener = new Listener();
+listener.on('hello', {
+    adapter     : adapters.helloWorldAdapter,
+    action      : actions.helloWorldAction
 });
 
 // APP
@@ -38,9 +42,7 @@ const app = createApp({
         server      : server,
         trustProxy  : true
     },
-    ioServer: {
-        server      : io
-    },
+    ioServer        : undefined, // will create a default socket.io server
     authenticator   : authenticator,
     database        : new MockDatabase(),
     cache           : new MockCache(),
@@ -51,9 +53,14 @@ const app = createApp({
 
 // attach routers
 app.register('/', router);
+app.register('/', listener);
+app.start();
 
 // start the server
 server.listen(3000, function () {
     console.log('Server started');
 });
 
+app.on('error', function(error) {
+    console.log(error.stack);
+});

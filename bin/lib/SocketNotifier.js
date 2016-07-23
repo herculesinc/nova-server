@@ -23,14 +23,9 @@ class SocketNotifier {
         for (let notice of notices) {
             if (!notice)
                 continue;
-            if (notice.topic) {
-                this.logger && this.logger.debug(`Sending ${notice.topic}:${notice.event} notice to (${notice.target}) target`);
-                this.server.of(notice.topic).in(notice.target).emit(notice.event, notice.payload);
-            }
-            else {
-                this.logger && this.logger.debug(`Sending ${notice.event} notice to (${notice.target}) target`);
-                this.server.sockets.in(notice.target).emit(notice.event, notice.payload);
-            }
+            const topic = notice.topic ? notice.topic : '/';
+            this.logger && this.logger.debug(`Sending ${topic}:${notice.event} notice to (${notice.target}) target`);
+            this.server.of(topic).in(notice.target).emit(notice.event, notice.payload);
         }
         // log the notice sent event
         this.logger && this.logger.log(`Notices Sent`, {

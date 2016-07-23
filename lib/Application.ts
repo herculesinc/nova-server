@@ -8,13 +8,14 @@ import * as socketio from 'socket.io';
 import * as responseTime from 'response-time';
 import * as toobusy from 'toobusy-js';
 import {
-    ExecutorContext, Database, Cache, Dispatcher, Authenticator, RateLimiter, Logger, HttpStatusCode,
-    Exception
+    Database, Cache, Dispatcher, Authenticator, RateLimiter, Logger, Exception, HttpStatusCode,
+    Executor, ExecutorContext, ActionContext, validate
 } from 'nova-base';
 
 import { Router } from './Router';
-import { Listener } from './Listener';
+import { Listener, symSocketAuthInputs } from './Listener';
 import { SocketNotifier } from './SocketNotifier';
+import { parseAuthHeader } from './util';
 
 // MODULE VARIABLES
 // =================================================================================================
@@ -33,7 +34,7 @@ export interface AppConfig {
     name            : string;
     version         : string;
     webServer       : WebServerConfig;
-    ioServer        : IoServerConfig;
+    ioServer?       : socketio.ServerOptions;
     authenticator   : Authenticator;
     database        : Database;
     cache           : Cache;
@@ -52,10 +53,6 @@ export interface WebServerConfig {
     trustProxy? : boolean | string | number;
 }
 
-export interface IoServerConfig {
-    server      : socketio.Server;
-}
-
 // CLASS DEFINITION
 // =================================================================================================
 export class Application extends EventEmitter {
@@ -64,11 +61,14 @@ export class Application extends EventEmitter {
     version         : string;
     context         : ExecutorContext;
 
+    server          : http.Server | https.Server;
     webServer       : express.Application;
     ioServer        : socketio.Server;
 
     endpointRouters : Map<string, Router>;
     socketListeners : Map<string, Listener>;
+
+    authExecutor    : Executor<string, string>;
 
     // CONSTRUCTOR
     // --------------------------------------------------------------------------------------------
@@ -84,6 +84,7 @@ export class Application extends EventEmitter {
         
 
         // initialize servers
+        this.server = options.webServer.server;
         this.setWebServer(options.webServer);
         this.setIoServer(options.ioServer);
 
@@ -94,6 +95,9 @@ export class Application extends EventEmitter {
         this.endpointRouters = new Map();
         this.socketListeners = new Map();
         
+        // initialize auth executor
+        this.authExecutor = new Executor(this.context, authenticateSocket, socketAuthAdapter);
+
         // set up lag handling
         toobusy.onLag((lag) => {
             this.emit(LAG_EVENT, lag);
@@ -115,9 +119,27 @@ export class Application extends EventEmitter {
         }
         else if (routerOrListener instanceof Listener) {
             if (this.socketListeners.has(path)) throw Error(`Topic {${path}} has been already attached to a listener`);
-            routerOrListener.attach(path, this.ioServer, this.context);
+            routerOrListener.attach(path, this.ioServer, this.context, (error: Error) => {
+                this.emit(ERROR_EVENT, error);
+            });
             this.socketListeners.set(path, routerOrListener);
         }    
+    }
+
+    start() {
+        // attach error handler
+        this.webServer.use((error: any, request: express.Request, response: express.Response, next: Function) => {
+            
+            // fire error event
+            this.emit(ERROR_EVENT, error);
+
+            // end response
+            response.status(error.status || HttpStatusCode.InternalServerError);
+            response.json( (error instanceof Exception) 
+                ? error 
+                : { name: error.name, message: error.message }
+            );
+        });
     }
 
     // PRIVATE METHODS
@@ -144,27 +166,36 @@ export class Application extends EventEmitter {
             next();
         });
 
-        // attach error handler
-        this.webServer.use((error: any, request: express.Request, response: express.Response, next: Function) => {
-            
-            // fire error event
-            this.emit(ERROR_EVENT, error);
-
-            // end response
-            response.status(error.status || HttpStatusCode.InternalServerError);
-            response.json( (error instanceof Exception) 
-                ? error 
-                : { name: error.name, message: error.message }
-            );
-        });
-
         // bind express app to the server
         options.server.on('request', this.webServer);
     }
 
-    private setIoServer(options: IoServerConfig) {
-        // not much to do here - yet
-        this.ioServer = options.server;
+    private setIoServer(options?: socketio.ServerOptions) {
+        // create the socket IO server
+        this.ioServer = socketio(this.server, options);
+
+        // attach socket authentication middleware
+        this.ioServer.use((socket: socketio.Socket, next: Function) => {
+            try {
+                const query = socket.handshake.query;
+                const authInputs = parseAuthHeader(query['authorization'] || query['Authorization']);
+                this.authExecutor.execute({ authenticator: this.context.authenticator }, authInputs)
+                    .then((socketOwnerId) => {
+                        socket.join(socketOwnerId, function() {
+                            socket[symSocketAuthInputs] = authInputs;
+                            next();
+                        });
+                    })
+                    .catch((error) => {
+                        this.emit(ERROR_EVENT, error);
+                        next(error);
+                    });
+            }
+            catch (error) {
+                this.emit(ERROR_EVENT, error);
+                next(error);
+            }
+        });
     }
 
     private setExecutorContext(options: AppConfig) {
@@ -190,4 +221,20 @@ export class Application extends EventEmitter {
 function validateOptions(options: AppConfig): AppConfig {
     // TODO: validate options
     return options;
+}
+
+// SOCKET AUTHENTICATOR ACTION
+// =================================================================================================
+interface SocketAuthInputs {
+    authenticator: Authenticator
+}
+
+function socketAuthAdapter(this: ActionContext, inputs: SocketAuthInputs, authInfo: any): Promise<string> {
+    // convert auth info to the owner string
+    return Promise.resolve(inputs.authenticator.toOwner(authInfo));
+}
+
+function authenticateSocket(this: ActionContext, inputs: string): Promise<string> {
+    // just a pass-through action
+    return Promise.resolve(inputs);
 }

@@ -9,6 +9,7 @@ import * as bodyParser from 'body-parser';
 import * as multer from 'multer';
 
 import { defaults } from './../index';
+import { parseAuthHeader } from './util';
 
 // MODULE VARIABLES
 // =================================================================================================
@@ -200,6 +201,7 @@ export class Router {
 
         // attach type checkers and body parser
         const expectsResponse = (config.response != undefined);
+        // TODO: add lag handler
         const handlers = [...getTypeCheckers(config.body, expectsResponse), getBodyParser(config.body)];
 
         // build executor map
@@ -209,6 +211,9 @@ export class Router {
         // build endpoint handler
         handlers.push(async function(request: Request, response: Response, next: Function) {
             try {
+                // TODO: log the request
+                // TODO: convert to regular (not asnyc) function
+
                 // build inputs object
                 const inputs = config.body && config.body.type === 'files' 
                     ? Object.assign({}, config.defaults, request.query, request.params, { files: request.files })
@@ -223,12 +228,7 @@ export class Router {
                 const authHeader = request.headers['authorization'];
                 if (authHeader) {
                     // if header is present, build auth inputs
-                    const authParts = authHeader.split(' ');
-                    validate.inputs(authParts.length === 2, 'Invalid authorization header');
-                    requestor = {
-                        scheme      : authParts[0],
-                        credentials : authParts[1]
-                    };
+                    requestor = parseAuthHeader(authHeader);
                 }
                 else {
                     // otherwise, set requestor to the IP address of the request

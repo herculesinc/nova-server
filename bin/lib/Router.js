@@ -13,6 +13,7 @@ const nova_base_1 = require('nova-base');
 const bodyParser = require('body-parser');
 const multer = require('multer');
 const index_1 = require('./../index');
+const util_1 = require('./util');
 // MODULE VARIABLES
 // =================================================================================================
 const DEFAULT_JSON_PARSER = bodyParser.json();
@@ -121,6 +122,7 @@ class Router {
         };
         // attach type checkers and body parser
         const expectsResponse = (config.response != undefined);
+        // TODO: add lag handler
         const handlers = [...getTypeCheckers(config.body, expectsResponse), getBodyParser(config.body)];
         // build executor map
         const selector = config.actions ? config.actions.selector : undefined;
@@ -129,6 +131,8 @@ class Router {
         handlers.push(function (request, response, next) {
             return __awaiter(this, void 0, void 0, function* () {
                 try {
+                    // TODO: log the request
+                    // TODO: convert to regular (not asnyc) function
                     // build inputs object
                     const inputs = config.body && config.body.type === 'files'
                         ? Object.assign({}, config.defaults, request.query, request.params, { files: request.files })
@@ -141,12 +145,7 @@ class Router {
                     const authHeader = request.headers['authorization'];
                     if (authHeader) {
                         // if header is present, build auth inputs
-                        const authParts = authHeader.split(' ');
-                        nova_base_1.validate.inputs(authParts.length === 2, 'Invalid authorization header');
-                        requestor = {
-                            scheme: authParts[0],
-                            credentials: authParts[1]
-                        };
+                        requestor = util_1.parseAuthHeader(authHeader);
                     }
                     else {
                         // otherwise, set requestor to the IP address of the request

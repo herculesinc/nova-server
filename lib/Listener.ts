@@ -1,17 +1,16 @@
 // IMPORTS
 // =================================================================================================
 import * as SocketIO from 'socket.io';
+import * as toobusy from 'toobusy-js'
 import { 
-    Action, ActionAdapter, ActionContext, Executor, ExecutorContext, ExecutionOptions, AuthInputs, 
-    RateOptions, DaoOptions, Exception, validate, Authenticator
+    Action, ActionAdapter, Executor, ExecutorContext, ExecutionOptions, AuthInputs, RateOptions,
+    DaoOptions, Exception, HttpStatusCode
 } from 'nova-base';
 
 // MODULE VARIABLES
 // =================================================================================================
-const symSocketAuthInputs = Symbol();
-
+export const symSocketAuthInputs = Symbol();
 const CONNECT_EVENT = 'connection';
-const AUTH_EVENT = 'authenticate';
 
 // INTERFACES
 // =================================================================================================
@@ -32,18 +31,16 @@ export interface SocketEventHandler {
 // =================================================================================================
 export class Listener {
 
-    name        : string;
+    name?       : string;
     topic       : string;
     context     : ExecutorContext;
     handlers    : Map<string, HandlerConfig<any,any>>;
-
-    authExecutor: Executor<string, string>;
 
     // CONSTRUCTOR
     // --------------------------------------------------------------------------------------------
     constructor(name?: string) {
         this.name = name;
-        this.handlers = new Map<string, HandlerConfig<any,any>>();
+        this.handlers = new Map();
     }
 
     // PUBLIC METHODS
@@ -56,55 +53,26 @@ export class Listener {
         this.handlers.set(event, config);
     }
 
-    attach(topic: string, server: SocketIO.Server, context: ExecutorContext) {
+    attach(topic: string, io: SocketIO.Server, context: ExecutorContext, errorHandler: (error: Error) => void) {
         // check if the listener has already been attached
         if (this.topic) throw new Error(`Listener has alread been bound to ${this.topic} topic`);
 
         // initialize listener variables
         this.topic = topic;
         this.context = context;
-        this.authExecutor = new Executor(this.context, authenticateSocket, socketAuthAdapter);
 
         // attach event handlers to the socket
-        // TODO: get the right namespace based on topic
-        server.on(CONNECT_EVENT, (socket) => {
-            
-            // attach the authenticator handler
-            socket.on(AUTH_EVENT, this.buildAuthHandler(socket));
-
-            // attach all other handlers
+        io.of(topic).on(CONNECT_EVENT, (socket) => {
+            // attach event handlers handlers
             for (let [event, config] of this.handlers) {
-                socket.on(event, this.buildEventHandler(config, socket));
+                socket.on(event, this.buildEventHandler(config, socket, errorHandler));
             }
         });
     }
 
     // PRIVATE METHODS
     // --------------------------------------------------------------------------------------------
-    private buildAuthHandler(socket: SocketIO.Socket): SocketEventHandler {
-        if (!socket) return;
-
-        // set up variables
-        const executor = this.authExecutor;
-        const authenticator = this.context.authenticator;
-
-        // build authentication handler for the socket
-        return function (data: AuthInputs, callback: (response) => void) {
-            executor.execute({ authenticator: authenticator }, data)
-                .then((socketOwnerId) => {
-                    socket.join(socketOwnerId, function() {
-                        socket[symSocketAuthInputs] = data;
-                        callback(undefined);
-                    })
-                })
-                .catch((error) => {
-                    // TODO: log the error
-                    callback(error);
-                });
-        }
-    }
-
-    private buildEventHandler(config: HandlerConfig<any,any>, socket: SocketIO.Socket): SocketEventHandler {
+    private buildEventHandler(config: HandlerConfig<any,any>, socket: SocketIO.Socket, errorHandler: (error: Error) => void): SocketEventHandler {
         if (!config || !socket) return;
 
         // build execution options
@@ -119,30 +87,23 @@ export class Listener {
 
         // build and return the handler
         return function(data: any, callback: (response) => void) {
+
+            // check if the server is too busy
+            if (toobusy()) {
+                const error = new Exception('The server is too busy', HttpStatusCode.ServiceUnavailable);
+                errorHandler(error);
+                return callback(error);
+            }
+            
+            // build inputs and run the executor
             const inputs = Object.assign({}, config.defaults, data); 
-            const authInputs: AuthInputs = undefined; // TODO: get auth data from socket
+            const authInputs: AuthInputs = socket[symSocketAuthInputs];
             executor.execute(inputs, authInputs)
                 .then((result) => callback(undefined))
                 .catch((error) => {
-                    // TODO: log the error
+                    errorHandler(error);
                     callback(error);
                 });
         }
     }
-}
-
-// AUTHENTICATOR ACTION
-// =================================================================================================
-interface SocketAuthInputs {
-    authenticator: Authenticator
-}
-
-function socketAuthAdapter(this: ActionContext, inputs: SocketAuthInputs, authInfo: any): Promise<string> {
-    // convert auth info to the owner string
-    return Promise.resolve(inputs.authenticator.toOwner(authInfo));
-}
-
-function authenticateSocket(this: ActionContext, inputs: string): Promise<string> {
-    // just a pass-through action
-    return Promise.resolve(inputs);
 }
