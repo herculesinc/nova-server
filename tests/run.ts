@@ -2,16 +2,18 @@
 // =================================================================================================
 import * as http from 'http';
 import * as socketio from 'socket.io';
-import { createApp, Router, Listener } from './../index';
+import { createApp, Router, SocketListener } from './../index';
 
 import * as actions from './actions';
 import * as adapters from './adapters';
 import * as views from './views';
+import { users } from './data/users';
 import { MockDatabase } from './mocks/Database';
 import { MockCache } from './mocks/Cache';
 import { authenticator } from './mocks/Authenticator';
 import { MockDispatcher } from './mocks/Dispatcher';
 import { MockLogger } from './mocks/Logger';
+import { MockRateLimiter } from './mocks/RateLimiter';
 
 // PERPARATIONS
 // =================================================================================================
@@ -27,7 +29,7 @@ router.set('/', {
     }
 });
 
-const listener = new Listener();
+const listener = new SocketListener();
 listener.on('hello', {
     adapter     : adapters.helloWorldAdapter,
     action      : actions.helloWorldAction
@@ -47,6 +49,11 @@ const app = createApp({
     database        : new MockDatabase(),
     cache           : new MockCache(),
     dispatcher      : new MockDispatcher(),
+    limiter         : new MockRateLimiter([users[1].id]),
+    rateLimits: {
+        window      : 250,
+        limit       : 10
+    },
     logger          : new MockLogger(),
     settings        : undefined
 });

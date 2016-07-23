@@ -2,11 +2,12 @@
 // =================================================================================================
 import { ActionContext, validate } from 'nova-base';
 import { HelloWorldNotice } from './notices';
+import { User } from './data/users';
 
 // HELLO WORLD
 // =================================================================================================
 interface HelloWorldInputs {
-    user    : string;
+    user    : User;
     author  : string;
 }
 

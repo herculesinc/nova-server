@@ -195,7 +195,7 @@ export class Router {
         // make sure transactions are started for non-readonly handlers
         const options: ExecutionOptions = {
             daoOptions  : Object.assign({}, config.dao, { startTransaction: !readonly }),
-            rateOptions : config.rate,  // TODO: get default options from somewhere?
+            rateLimits  : config.rate,
             authOptions : config.auth
         };
 

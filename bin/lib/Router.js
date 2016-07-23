@@ -117,7 +117,7 @@ class Router {
         // make sure transactions are started for non-readonly handlers
         const options = {
             daoOptions: Object.assign({}, config.dao, { startTransaction: !readonly }),
-            rateOptions: config.rate,
+            rateLimits: config.rate,
             authOptions: config.auth
         };
         // attach type checkers and body parser

@@ -6,7 +6,7 @@ const responseTime = require('response-time');
 const toobusy = require('toobusy-js');
 const nova_base_1 = require('nova-base');
 const Router_1 = require('./Router');
-const Listener_1 = require('./Listener');
+const SocketListener_1 = require('./SocketListener');
 const SocketNotifier_1 = require('./SocketNotifier');
 const util_1 = require('./util');
 // MODULE VARIABLES
@@ -30,9 +30,7 @@ class Application extends events_1.EventEmitter {
         // initialize basic instance variables
         this.name = options.name;
         this.version = options.version;
-        this.rateLimits = options.rateLimits;
         // initialize servers
-        this.server = options.webServer.server;
         this.setWebServer(options.webServer);
         this.setIoServer(options.ioServer);
         // initlize context
@@ -55,10 +53,10 @@ class Application extends events_1.EventEmitter {
         if (routerOrListener instanceof Router_1.Router) {
             if (this.endpointRouters.has(path))
                 throw Error(`Path {${path}} has already been attached to a router`);
-            routerOrListener.attach(path, this.webServer, this.context);
+            routerOrListener.attach(path, this.eServer, this.context);
             this.endpointRouters.set(path, routerOrListener);
         }
-        else if (routerOrListener instanceof Listener_1.Listener) {
+        else if (routerOrListener instanceof SocketListener_1.SocketListener) {
             if (this.socketListeners.has(path))
                 throw Error(`Topic {${path}} has been already attached to a listener`);
             routerOrListener.attach(path, this.ioServer, this.context, (error) => {
@@ -69,7 +67,7 @@ class Application extends events_1.EventEmitter {
     }
     start() {
         // attach error handler
-        this.webServer.use((error, request, response, next) => {
+        this.eServer.use((error, request, response, next) => {
             // fire error event
             this.emit(ERROR_EVENT, error);
             // end response
@@ -83,15 +81,16 @@ class Application extends events_1.EventEmitter {
     // --------------------------------------------------------------------------------------------
     setWebServer(options) {
         // create express app
-        this.webServer = express();
+        this.webServer = options.server;
+        this.eServer = express();
         // configure express app
-        this.webServer.set('trust proxy', options.trustProxy);
-        this.webServer.set('x-powered-by', false);
-        this.webServer.set('etag', false);
+        this.eServer.set('trust proxy', options.trustProxy);
+        this.eServer.set('x-powered-by', false);
+        this.eServer.set('etag', false);
         // calculate response time
-        this.webServer.use(responseTime({ digits: 0, suffix: false, header: headers.RSPONSE_TIME }));
+        this.eServer.use(responseTime({ digits: 0, suffix: false, header: headers.RSPONSE_TIME }));
         // set version header
-        this.webServer.use((request, response, next) => {
+        this.eServer.use((request, response, next) => {
             response.set({
                 [headers.SERVER_NAME]: this.name,
                 [headers.API_VERSION]: this.version
@@ -99,11 +98,11 @@ class Application extends events_1.EventEmitter {
             next();
         });
         // bind express app to the server
-        options.server.on('request', this.webServer);
+        this.webServer.on('request', this.eServer);
     }
     setIoServer(options) {
         // create the socket IO server
-        this.ioServer = socketio(this.server, options);
+        this.ioServer = socketio(this.webServer, options);
         // attach socket authentication middleware
         this.ioServer.use((socket, next) => {
             try {
@@ -117,7 +116,7 @@ class Application extends events_1.EventEmitter {
                 this.authExecutor.execute({ authenticator: this.context.authenticator }, authInputs)
                     .then((socketOwnerId) => {
                     socket.join(socketOwnerId, function () {
-                        socket[Listener_1.symSocketAuthInputs] = authInputs;
+                        socket[SocketListener_1.symSocketAuthInputs] = authInputs;
                         next();
                     });
                 })
@@ -143,6 +142,7 @@ class Application extends events_1.EventEmitter {
             dispatcher: options.dispatcher,
             notifier: notifier,
             limiter: options.limiter,
+            rateLimits: options.rateLimits,
             logger: options.logger,
             settings: options.settings
         };

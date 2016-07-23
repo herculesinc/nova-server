@@ -29,7 +29,7 @@ export interface SocketEventHandler {
 
 // CLASS DEFINITION
 // =================================================================================================
-export class Listener {
+export class SocketListener {
 
     name?       : string;
     topic       : string;
@@ -82,7 +82,7 @@ export class Listener {
         // build execution options
         const options: ExecutionOptions = {
             daoOptions  : config.dao,
-            rateOptions : Object.assign({}, this.rateLimits, config.rate),
+            rateLimits  : config.rate,
             authOptions : config.auth
         };
 

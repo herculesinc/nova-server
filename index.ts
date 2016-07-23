@@ -41,4 +41,4 @@ export function configure(setting: string, config: any) {
 // RE-EXPORTS
 // =================================================================================================
 export { Router } from './lib/Router';
-export { Listener } from './lib/Listener';
+export { SocketListener } from './lib/SocketListener';

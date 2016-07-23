@@ -32,6 +32,6 @@ exports.configure = configure;
 // =================================================================================================
 var Router_1 = require('./lib/Router');
 exports.Router = Router_1.Router;
-var Listener_1 = require('./lib/Listener');
-exports.Listener = Listener_1.Listener;
+var SocketListener_1 = require('./lib/SocketListener');
+exports.SocketListener = SocketListener_1.SocketListener;
 //# sourceMappingURL=index.js.map

@@ -13,7 +13,7 @@ import {
 } from 'nova-base';
 
 import { Router } from './Router';
-import { Listener, symSocketAuthInputs } from './Listener';
+import { SocketListener, symSocketAuthInputs } from './SocketListener';
 import { SocketNotifier } from './SocketNotifier';
 import { parseAuthHeader } from './util';
 
@@ -39,20 +39,16 @@ export interface AppConfig {
     database        : Database;
     cache           : Cache;
     dispatcher      : Dispatcher;
-    logger?         : Logger;
     limiter?        : RateLimiter;
+    rateLimits?     : RateOptions;
+    logger?         : Logger;
     settings?       : any;
-    rateLimits?     : RateLimitConfig;
+    
 }
 
 export interface WebServerConfig {
     server      : http.Server | https.Server;
     trustProxy? : boolean | string | number;
-}
-
-export interface RateLimitConfig {
-    anonymous?      : RateOptions;
-    authenticated?  : RateOptions;
 }
 
 // CLASS DEFINITION
@@ -63,14 +59,13 @@ export class Application extends EventEmitter {
     version         : string;
     context         : ExecutorContext;
 
-    server          : http.Server | https.Server;
-    webServer       : express.Application;
+    webServer       : http.Server | https.Server;
     ioServer        : socketio.Server;
 
     endpointRouters : Map<string, Router>;
-    socketListeners : Map<string, Listener>;
+    socketListeners : Map<string, SocketListener>;
 
-    rateLimits      : RateLimitConfig;
+    eServer         : express.Application;
     authExecutor    : Executor<string, string>;
 
     // CONSTRUCTOR
@@ -84,10 +79,8 @@ export class Application extends EventEmitter {
         // initialize basic instance variables
         this.name = options.name;
         this.version = options.version;
-        this.rateLimits = options.rateLimits;
 
         // initialize servers
-        this.server = options.webServer.server;
         this.setWebServer(options.webServer);
         this.setIoServer(options.ioServer);
 
@@ -110,17 +103,17 @@ export class Application extends EventEmitter {
     // PUBLIC METHODS
     // --------------------------------------------------------------------------------------------
     register(root: string, router: Router);
-    register(topic: string, listener: Listener)
-    register(path: string, routerOrListener: Router | Listener) {
+    register(topic: string, listener: SocketListener)
+    register(path: string, routerOrListener: Router | SocketListener) {
         if (!path) throw new Error('Cannot register router or listener: path is undefined');
         if (!routerOrListener) throw new Error('Cannot register router or listener: router or listener is undefined');
 
         if (routerOrListener instanceof Router) {
             if (this.endpointRouters.has(path)) throw Error(`Path {${path}} has already been attached to a router`);
-            routerOrListener.attach(path, this.webServer, this.context);
+            routerOrListener.attach(path, this.eServer, this.context);
             this.endpointRouters.set(path, routerOrListener);
         }
-        else if (routerOrListener instanceof Listener) {
+        else if (routerOrListener instanceof SocketListener) {
             if (this.socketListeners.has(path)) throw Error(`Topic {${path}} has been already attached to a listener`);
             routerOrListener.attach(path, this.ioServer, this.context, (error: Error) => {
                 this.emit(ERROR_EVENT, error);
@@ -131,7 +124,7 @@ export class Application extends EventEmitter {
 
     start() {
         // attach error handler
-        this.webServer.use((error: any, request: express.Request, response: express.Response, next: Function) => {
+        this.eServer.use((error: any, request: express.Request, response: express.Response, next: Function) => {
             
             // fire error event
             this.emit(ERROR_EVENT, error);
@@ -150,18 +143,19 @@ export class Application extends EventEmitter {
     private setWebServer(options: WebServerConfig) {
 
         // create express app
-        this.webServer = express();
+        this.webServer = options.server;
+        this.eServer = express();
 
         // configure express app
-        this.webServer.set('trust proxy', options.trustProxy); 
-        this.webServer.set('x-powered-by', false);
-        this.webServer.set('etag', false);
+        this.eServer.set('trust proxy', options.trustProxy); 
+        this.eServer.set('x-powered-by', false);
+        this.eServer.set('etag', false);
 
         // calculate response time
-        this.webServer.use(responseTime({ digits: 0, suffix: false, header: headers.RSPONSE_TIME }));
+        this.eServer.use(responseTime({ digits: 0, suffix: false, header: headers.RSPONSE_TIME }));
 
         // set version header
-        this.webServer.use((request: express.Request, response: express.Response, next: Function) => {
+        this.eServer.use((request: express.Request, response: express.Response, next: Function) => {
             response.set({
                 [headers.SERVER_NAME]: this.name,
                 [headers.API_VERSION]: this.version
@@ -170,12 +164,12 @@ export class Application extends EventEmitter {
         });
 
         // bind express app to the server
-        options.server.on('request', this.webServer);
+        this.webServer.on('request', this.eServer);
     }
 
     private setIoServer(options?: socketio.ServerOptions) {
         // create the socket IO server
-        this.ioServer = socketio(this.server, options);
+        this.ioServer = socketio(this.webServer, options);
 
         // attach socket authentication middleware
         this.ioServer.use((socket: socketio.Socket, next: Function) => {
@@ -219,6 +213,7 @@ export class Application extends EventEmitter {
             dispatcher      : options.dispatcher,
             notifier        : notifier,
             limiter         : options.limiter,
+            rateLimits      : options.rateLimits,
             logger          : options.logger,
             settings        : options.settings
         };

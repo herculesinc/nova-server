@@ -7,7 +7,7 @@ exports.symSocketAuthInputs = Symbol();
 const CONNECT_EVENT = 'connection';
 // CLASS DEFINITION
 // =================================================================================================
-class Listener {
+class SocketListener {
     // CONSTRUCTOR
     // --------------------------------------------------------------------------------------------
     constructor(name) {
@@ -49,7 +49,7 @@ class Listener {
         // build execution options
         const options = {
             daoOptions: config.dao,
-            rateOptions: Object.assign({}, this.rateLimits, config.rate),
+            rateLimits: config.rate,
             authOptions: config.auth
         };
         // build executor
@@ -74,5 +74,5 @@ class Listener {
         };
     }
 }
-exports.Listener = Listener;
-//# sourceMappingURL=Listener.js.map
+exports.SocketListener = SocketListener;
+//# sourceMappingURL=SocketListener.js.map

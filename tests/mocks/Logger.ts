@@ -1,5 +1,6 @@
 // IMPORTS
 // =================================================================================================
+import * as http from 'http';
 import { Logger } from 'nova-base';
 
 // LOGGER CLASS
@@ -17,10 +18,21 @@ export class MockLogger {
     }
 
     track(metric: string, value: number) {
-        console.log(`[${metric}=${value}]`)
+        console.log(`[${metric}=${value}]`);
     }
 
     trace(service: string, command: string, time: number, success?: boolean) {
-        console.log(`[${service}]: executed {${command}} in ${time} ms`)
+        console.log(`[${service}]: executed {${command}} in ${time} ms`);
+    }
+
+    request(request: http.IncomingMessage, response: http.ServerResponse) {
+        
+        const method    = request.method;
+        const url       = request.url;
+        const version   = request.httpVersion;
+        const status    = response.statusCode;
+        const length    = response.getHeader('content-length');
+
+        console.log(`${method} ${url} ${status} - ${length}`);
     }
 }

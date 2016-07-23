@@ -22,10 +22,10 @@ declare module "nova-server" {
         database        : nova.Database;
         cache           : nova.Cache;
         dispatcher      : nova.Dispatcher;
-        logger?         : nova.Logger;
         limiter?        : nova.RateLimiter;
+        rateLimits?     : nova.RateOptions;
+        logger?         : nova.Logger;
         settings?       : any;
-        rateLimits?     : RateLimitConfig;
     }
 
     export interface WebServerConfig {
@@ -33,17 +33,12 @@ declare module "nova-server" {
         trustProxy? : boolean | string | number;
     }
 
-    export interface RateLimitConfig {
-        anonymous?      : nova.RateOptions;
-        authenticated?  : nova.RateOptions;
-    }
-
     export interface Application extends events.EventEmitter {
         name    : string;
         version : string;
 
         register(root: string, router: Router);
-        register(topic: string, listener: Listener);
+        register(topic: string, listener: SocketListener);
 
         start();
 
@@ -121,7 +116,7 @@ declare module "nova-server" {
 
     // LISTENER
     // --------------------------------------------------------------------------------------------
-    export class Listener {
+    export class SocketListener {
         name?: string;
 
         constructor(name?: string);

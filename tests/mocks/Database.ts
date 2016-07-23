@@ -1,6 +1,7 @@
 // IMPORTS
 // ================================================================================================
 import { Database, Dao, DaoOptions } from 'nova-base';
+import { User, users } from './../data/users';
 
 // DATABASE CLASS
 // =================================================================================================
@@ -22,10 +23,19 @@ export class MockDao implements Dao {
         this.isActive = true;
     }
 
+    fetchUserById(id: string): Promise<User> {
+        const user = users.find((user) => user.id === id);
+        return Promise.resolve(user);
+    }
+
+    fetchUserByToken(token: string): Promise<User> {
+        const user = users.find((user) => user.token === token);
+        return Promise.resolve(user);
+    }
+
     release(action?: 'commit' | 'rollback'): Promise<any> {
         this.inTransaction = false;
         this.isActive = false;
-        // console.log(`Releasing database connection: ${action}`)
         return Promise.resolve();
     }
 }

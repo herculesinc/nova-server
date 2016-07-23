@@ -1,6 +1,7 @@
 // IMPORTS
 // =================================================================================================
 import { Notice } from 'nova-server';
+import { User } from './data/users';
 
 // HELLO WORLD
 // =================================================================================================
@@ -10,8 +11,8 @@ export class HelloWorldNotice implements Notice {
     target  : string;
     payload : any;
 
-    constructor(target: string, author: string) {
-        this.target = target;
+    constructor(user: User, author: string) {
+        this.target = user.id;
         this.payload = {
             message: "Hello World!",
             author  : author

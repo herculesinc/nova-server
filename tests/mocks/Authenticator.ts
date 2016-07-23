@@ -1,25 +1,25 @@
 // IMPORTS
 // =================================================================================================
 import { AuthInputs, Authenticator, ActionContext, validate } from 'nova-base';
+import { MockDao } from './Database';
+import { User } from './../data/users';
 
 // MODULE VARIABLES
 // =================================================================================================
 const KEY = 'testkey';
-const TOKEN_USER_MAP = {
-    testtoken1: 'user1',
-    testtoken2: 'user2'
-};
 
 // AUTHENTICATOR
 // =================================================================================================
-export const authenticator: Authenticator = function(this: ActionContext, inputs: AuthInputs, options: any): Promise<string> {
+export const authenticator: Authenticator = function(this: ActionContext, inputs: AuthInputs, options: any): Promise<User> {
 
     try {
         validate.authorized(inputs, 'No auth data provided');
         if (inputs.scheme === 'token') {
-            const user = TOKEN_USER_MAP[inputs.credentials];
-            validate.authorized(user, 'Invalid token');
-            return Promise.resolve(user);
+            return (this.dao as MockDao).fetchUserByToken(inputs.credentials)
+                .then((user) => {
+                    validate.authorized(user, 'Invalid token');
+                    return user;
+                });
         }
         else if (inputs.scheme === 'key') {
             validate.authorized(inputs.credentials === KEY, 'Invalid Key');
@@ -34,7 +34,7 @@ export const authenticator: Authenticator = function(this: ActionContext, inputs
     }
 }
 
-authenticator.toOwner = function(authResult: any): string {
+authenticator.toOwner = function(authResult: User): string {
     if (!authResult) return undefined;
-    return authResult;
+    return authResult.id;
 };

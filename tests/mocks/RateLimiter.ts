@@ -27,7 +27,6 @@ export class MockRateLimiter implements RateLimiter {
     }
 
     try(id: string, options: RateOptions): Promise<any> {
-        // console.log(`Checking rate limit for {${id}} with options ${JSON.stringify(options)}`);
         return this.errorKeys.has(id) ?  Promise.reject(new RateLimitError(id, 123)) : Promise.resolve();
     }
 }
