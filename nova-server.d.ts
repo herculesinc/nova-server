@@ -29,13 +29,16 @@ declare module "nova-server" {
     }
 
     export interface WebServerConfig {
-        server      : http.Server | https.Server;
-        trustProxy? : boolean | string | number;
+        server          : http.Server | https.Server;
+        trustProxy?     : boolean | string | number;
     }
 
     export interface Application extends events.EventEmitter {
-        name    : string;
-        version : string;
+        name        : string;
+        version     : string;
+
+        ioServer    : socketio.Server;
+        webServer   : http.Server | https.Server;
 
         register(root: string, router: Router);
         register(topic: string, listener: SocketListener);

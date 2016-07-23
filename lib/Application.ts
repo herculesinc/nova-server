@@ -43,12 +43,11 @@ export interface AppConfig {
     rateLimits?     : RateOptions;
     logger?         : Logger;
     settings?       : any;
-    
 }
 
 export interface WebServerConfig {
-    server      : http.Server | https.Server;
-    trustProxy? : boolean | string | number;
+    server          : http.Server | https.Server;
+    trustProxy?     : boolean | string | number;
 }
 
 // CLASS DEFINITION
@@ -123,6 +122,11 @@ export class Application extends EventEmitter {
     }
 
     start() {
+        // chatch all unresolved requests
+        this.eServer.use(function (request: express.Request, response: express.Response, next: Function) {
+            next(new Exception(`Endpoint ${request.path} does not exist`, HttpStatusCode.NotFound));
+        });
+
         // attach error handler
         this.eServer.use((error: any, request: express.Request, response: express.Response, next: Function) => {
             

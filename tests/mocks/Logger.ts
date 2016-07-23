@@ -25,14 +25,13 @@ export class MockLogger {
         console.log(`[${service}]: executed {${command}} in ${time} ms`);
     }
 
-    request(request: http.IncomingMessage, response: http.ServerResponse) {
+    request(request: any, response: http.ServerResponse) {
         
         const method    = request.method;
-        const url       = request.url;
+        const url       = request.path || request.url;
         const version   = request.httpVersion;
         const status    = response.statusCode;
-        const length    = response.getHeader('content-length');
 
-        console.log(`${method} ${url} ${status} - ${length}`);
+        console.log(`${method} ${url} ${status}`);
     }
 }

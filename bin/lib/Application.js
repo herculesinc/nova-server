@@ -66,6 +66,10 @@ class Application extends events_1.EventEmitter {
         }
     }
     start() {
+        // chatch all unresolved requests
+        this.eServer.use(function (request, response, next) {
+            next(new nova_base_1.Exception(`Endpoint ${request.path} does not exist`, 404 /* NotFound */));
+        });
         // attach error handler
         this.eServer.use((error, request, response, next) => {
             // fire error event
