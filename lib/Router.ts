@@ -2,11 +2,12 @@
 // =================================================================================================
 import { 
     Action, ActionAdapter, Executor, ExecutorContext, ExecutionOptions, AuthInputs, RateOptions,
-    DaoOptions, HttpStatusCode, Exception, validate
+    DaoOptions, HttpStatusCode, Exception, validate, TooBusyError
 } from 'nova-base';
 import { Application as ExpressApp, RequestHandler, Request, Response } from 'express';
 import * as bodyParser from 'body-parser';
 import * as multer from 'multer';
+import * as toobusy from 'toobusy-js';
 
 import { defaults } from './../index';
 import { parseAuthHeader } from './util';
@@ -131,6 +132,9 @@ export class Router {
         this.root = root;
         this.context = context;
 
+        // get the logger from context
+        const logger = context.logger;
+
         // attach route handlers to the server
         for (let [subpath, config] of this.routes) {
             const methods = ['OPTIONS'];
@@ -138,13 +142,24 @@ export class Router {
             const corsOptions: CorsOptions = Object.assign({}, defaults.CORS, config.cors);
 
             server.all(this.root, function(request: Request, response: Response, next: Function) {
+                // add CORS response headers for all requests
                 response.header('Access-Control-Allow-Methods', allowedMethods);
                 response.header('Access-Control-Allow-Origin', corsOptions.origin);
                 response.header('Access-Control-Allow-Headers', allowedHeaders);
                 response.header('Access-Control-Allow-Credentials', corsOptions.credentials);
                 response.header('Access-Control-Max-Age', corsOptions.maxAge);
                 
-                return (request.method === 'OPTIONS') ? response.sendStatus(200) : next();
+                if (request.method === 'OPTIONS') {
+                    // immediately end OPTION requests
+                    response.sendStatus(HttpStatusCode.OK);
+                }
+                else {
+                    // log the request
+                    logger && logger.request(request, response);
+
+                    // check for server load
+                    return toobusy() ? next(new TooBusyError()) : next();
+                }
             });
 
             if (config.get) {
@@ -201,7 +216,6 @@ export class Router {
 
         // attach type checkers and body parser
         const expectsResponse = (config.response != undefined);
-        // TODO: add lag handler
         const handlers = [...getTypeCheckers(config.body, expectsResponse), getBodyParser(config.body)];
 
         // build executor map
@@ -211,7 +225,6 @@ export class Router {
         // build endpoint handler
         handlers.push(async function(request: Request, response: Response, next: Function) {
             try {
-                // TODO: log the request
                 // TODO: convert to regular (not asnyc) function
 
                 // build inputs object
@@ -327,6 +340,9 @@ function buildExecutorMap<V,T>(config: EndpointConfig<V,T>, context: ExecutorCon
         const executor = new Executor(context, config.action, config.adapter, options);
         executorMap.set(undefined, executor);
     }
-    
+    else {
+        throw new Error('Cannot create an executor: no endpoint actions provided');
+    }
+
     return executorMap;
 }

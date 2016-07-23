@@ -12,6 +12,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 const nova_base_1 = require('nova-base');
 const bodyParser = require('body-parser');
 const multer = require('multer');
+const toobusy = require('toobusy-js');
 const index_1 = require('./../index');
 const util_1 = require('./util');
 // MODULE VARIABLES
@@ -63,18 +64,30 @@ class Router {
         // initialize router variables
         this.root = root;
         this.context = context;
+        // get the logger from context
+        const logger = context.logger;
         // attach route handlers to the server
         for (let [subpath, config] of this.routes) {
             const methods = ['OPTIONS'];
             const fullpath = this.root + subpath;
             const corsOptions = Object.assign({}, index_1.defaults.CORS, config.cors);
             server.all(this.root, function (request, response, next) {
+                // add CORS response headers for all requests
                 response.header('Access-Control-Allow-Methods', allowedMethods);
                 response.header('Access-Control-Allow-Origin', corsOptions.origin);
                 response.header('Access-Control-Allow-Headers', allowedHeaders);
                 response.header('Access-Control-Allow-Credentials', corsOptions.credentials);
                 response.header('Access-Control-Max-Age', corsOptions.maxAge);
-                return (request.method === 'OPTIONS') ? response.sendStatus(200) : next();
+                if (request.method === 'OPTIONS') {
+                    // immediately end OPTION requests
+                    response.sendStatus(200 /* OK */);
+                }
+                else {
+                    // log the request
+                    logger && logger.request(request, response);
+                    // check for server load
+                    return toobusy() ? next(new nova_base_1.TooBusyError()) : next();
+                }
             });
             if (config.get) {
                 server.get(fullpath, ...this.buildEndpointHandlers(config.get, true));
@@ -122,7 +135,6 @@ class Router {
         };
         // attach type checkers and body parser
         const expectsResponse = (config.response != undefined);
-        // TODO: add lag handler
         const handlers = [...getTypeCheckers(config.body, expectsResponse), getBodyParser(config.body)];
         // build executor map
         const selector = config.actions ? config.actions.selector : undefined;
@@ -131,7 +143,6 @@ class Router {
         handlers.push(function (request, response, next) {
             return __awaiter(this, void 0, void 0, function* () {
                 try {
-                    // TODO: log the request
                     // TODO: convert to regular (not asnyc) function
                     // build inputs object
                     const inputs = config.body && config.body.type === 'files'
@@ -236,6 +247,9 @@ function buildExecutorMap(config, context, options) {
     else if (config.action) {
         const executor = new nova_base_1.Executor(context, config.action, config.adapter, options);
         executorMap.set(undefined, executor);
+    }
+    else {
+        throw new Error('Cannot create an executor: no endpoint actions provided');
     }
     return executorMap;
 }
