@@ -32,6 +32,7 @@ class Listener {
         // initialize listener variables
         this.topic = topic;
         this.context = context;
+        this.rateLimits = undefined; // TODO: set to something
         // attach event handlers to the socket
         io.of(topic).on(CONNECT_EVENT, (socket) => {
             // attach event handlers handlers
@@ -48,7 +49,7 @@ class Listener {
         // build execution options
         const options = {
             daoOptions: config.dao,
-            rateOptions: config.rate,
+            rateOptions: Object.assign({}, this.rateLimits, config.rate),
             authOptions: config.auth
         };
         // build executor
@@ -57,7 +58,7 @@ class Listener {
         return function (data, callback) {
             // check if the server is too busy
             if (toobusy()) {
-                const error = new nova_base_1.Exception('The server is too busy', 503 /* ServiceUnavailable */);
+                const error = new nova_base_1.TooBusyError();
                 errorHandler(error);
                 return callback(error);
             }

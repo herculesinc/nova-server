@@ -9,7 +9,7 @@ import * as responseTime from 'response-time';
 import * as toobusy from 'toobusy-js';
 import {
     Database, Cache, Dispatcher, Authenticator, RateLimiter, Logger, Exception, HttpStatusCode,
-    Executor, ExecutorContext, ActionContext, validate
+    Executor, ExecutorContext, ActionContext, TooBusyError, RateOptions
 } from 'nova-base';
 
 import { Router } from './Router';
@@ -42,15 +42,17 @@ export interface AppConfig {
     logger?         : Logger;
     limiter?        : RateLimiter;
     settings?       : any;
-
-    options?: {
-        reateLimits?: any;
-    }
+    rateLimits?     : RateLimitConfig;
 }
 
 export interface WebServerConfig {
     server      : http.Server | https.Server;
     trustProxy? : boolean | string | number;
+}
+
+export interface RateLimitConfig {
+    anonymous?      : RateOptions;
+    authenticated?  : RateOptions;
 }
 
 // CLASS DEFINITION
@@ -68,6 +70,7 @@ export class Application extends EventEmitter {
     endpointRouters : Map<string, Router>;
     socketListeners : Map<string, Listener>;
 
+    rateLimits      : RateLimitConfig;
     authExecutor    : Executor<string, string>;
 
     // CONSTRUCTOR
@@ -81,7 +84,7 @@ export class Application extends EventEmitter {
         // initialize basic instance variables
         this.name = options.name;
         this.version = options.version;
-        
+        this.rateLimits = options.rateLimits;
 
         // initialize servers
         this.server = options.webServer.server;
@@ -177,8 +180,14 @@ export class Application extends EventEmitter {
         // attach socket authentication middleware
         this.ioServer.use((socket: socketio.Socket, next: Function) => {
             try {
+                // reject new connections if the server is too busy
+                if (toobusy()) throw new TooBusyError();
+
+                // get and parse auth data from handshake
                 const query = socket.handshake.query;
                 const authInputs = parseAuthHeader(query['authorization'] || query['Authorization']);
+
+                // run authentication executor and mark socket as authenticated
                 this.authExecutor.execute({ authenticator: this.context.authenticator }, authInputs)
                     .then((socketOwnerId) => {
                         socket.join(socketOwnerId, function() {

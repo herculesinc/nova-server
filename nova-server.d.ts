@@ -17,7 +17,7 @@ declare module "nova-server" {
         name            : string;
         version         : string;
         webServer       : WebServerConfig;
-        ioServer        : IoServerConfig;
+        ioServer        : socketio.ServerOptions;
         authenticator   : nova.Authenticator;
         database        : nova.Database;
         cache           : nova.Cache;
@@ -25,10 +25,7 @@ declare module "nova-server" {
         logger?         : nova.Logger;
         limiter?        : nova.RateLimiter;
         settings?       : any;
-
-        options?: {
-            reateLimits?: any;
-        }
+        rateLimits?     : RateLimitConfig;
     }
 
     export interface WebServerConfig {
@@ -36,8 +33,9 @@ declare module "nova-server" {
         trustProxy? : boolean | string | number;
     }
 
-    export interface IoServerConfig {
-        server      : socketio.Server;
+    export interface RateLimitConfig {
+        anonymous?      : nova.RateOptions;
+        authenticated?  : nova.RateOptions;
     }
 
     export interface Application extends events.EventEmitter {
@@ -47,6 +45,8 @@ declare module "nova-server" {
         register(root: string, router: Router);
         register(topic: string, listener: Listener);
 
+        start();
+
         on(event: 'error', callback: (error: Error) => void);
         on(event: 'lag', callback: (lag: number) => void);
     }
@@ -54,6 +54,8 @@ declare module "nova-server" {
     // ROUTER
     // --------------------------------------------------------------------------------------------
     export class Router {
+        name?: string;
+
         constructor(name?: string);
         set<V,T>(path: string, config: RouteConfig);
     }
@@ -120,6 +122,8 @@ declare module "nova-server" {
     // LISTENER
     // --------------------------------------------------------------------------------------------
     export class Listener {
+        name?: string;
+
         constructor(name?: string);
         on<V,T>(event: string, config: SocketHandlerConfig<V,T>);
     }
@@ -133,7 +137,16 @@ declare module "nova-server" {
         auth?           : any;
     }
 
+    // LOAD CONTROLLER
+    // --------------------------------------------------------------------------------------------
+    export interface LoadControllerConfig {
+        interval: number;
+        maxLag  : number;
+    }
+
     // PUBLIC FUNCTIONS
     // --------------------------------------------------------------------------------------------
     export function createApp(config: AppConfig): Application;
+
+    export function configure(setting: 'load controller', config: LoadControllerConfig);
 }

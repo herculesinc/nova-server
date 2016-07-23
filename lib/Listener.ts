@@ -4,7 +4,7 @@ import * as SocketIO from 'socket.io';
 import * as toobusy from 'toobusy-js'
 import { 
     Action, ActionAdapter, Executor, ExecutorContext, ExecutionOptions, AuthInputs, RateOptions,
-    DaoOptions, Exception, HttpStatusCode
+    DaoOptions, TooBusyError
 } from 'nova-base';
 
 // MODULE VARIABLES
@@ -36,6 +36,8 @@ export class Listener {
     context     : ExecutorContext;
     handlers    : Map<string, HandlerConfig<any,any>>;
 
+    rateLimits  : RateOptions;
+
     // CONSTRUCTOR
     // --------------------------------------------------------------------------------------------
     constructor(name?: string) {
@@ -61,6 +63,8 @@ export class Listener {
         this.topic = topic;
         this.context = context;
 
+        this.rateLimits = undefined; // TODO: set to something
+
         // attach event handlers to the socket
         io.of(topic).on(CONNECT_EVENT, (socket) => {
             // attach event handlers handlers
@@ -78,7 +82,7 @@ export class Listener {
         // build execution options
         const options: ExecutionOptions = {
             daoOptions  : config.dao,
-            rateOptions : config.rate,  // TODO: get default options from somewhere?
+            rateOptions : Object.assign({}, this.rateLimits, config.rate),
             authOptions : config.auth
         };
 
@@ -90,7 +94,7 @@ export class Listener {
 
             // check if the server is too busy
             if (toobusy()) {
-                const error = new Exception('The server is too busy', HttpStatusCode.ServiceUnavailable);
+                const error = new TooBusyError();
                 errorHandler(error);
                 return callback(error);
             }

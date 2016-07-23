@@ -1,6 +1,7 @@
 "use strict";
 // IMPORTS
 // ================================================================================================
+const toobusy = require('toobusy-js');
 const Application_1 = require('./lib/Application');
 // MODULE VARIABLES
 // =================================================================================================
@@ -8,13 +9,9 @@ exports.defaults = {
     CORS: {
         origin: '*',
         headers: ['authorization', 'content-type', 'accept', 'x-requested-with', 'cache-control'],
+        // TODO: add expose headers?
         credentials: 'true',
         maxAge: '1000000000'
-    },
-    rateLimits: {
-        // TODO: find better names?
-        anonymous: undefined,
-        identified: undefined
     }
 };
 // PUBLIC FUNCTIONS
@@ -24,6 +21,13 @@ function createApp(options) {
     return app;
 }
 exports.createApp = createApp;
+function configure(setting, config) {
+    if (setting === 'load controller') {
+        toobusy.maxLag(config.maxLag);
+        toobusy.interval(config.interval);
+    }
+}
+exports.configure = configure;
 // RE-EXPORTS
 // =================================================================================================
 var Router_1 = require('./lib/Router');

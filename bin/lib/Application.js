@@ -30,6 +30,7 @@ class Application extends events_1.EventEmitter {
         // initialize basic instance variables
         this.name = options.name;
         this.version = options.version;
+        this.rateLimits = options.rateLimits;
         // initialize servers
         this.server = options.webServer.server;
         this.setWebServer(options.webServer);
@@ -106,8 +107,13 @@ class Application extends events_1.EventEmitter {
         // attach socket authentication middleware
         this.ioServer.use((socket, next) => {
             try {
+                // reject new connections if the server is too busy
+                if (toobusy())
+                    throw new nova_base_1.TooBusyError();
+                // get and parse auth data from handshake
                 const query = socket.handshake.query;
                 const authInputs = util_1.parseAuthHeader(query['authorization'] || query['Authorization']);
+                // run authentication executor and mark socket as authenticated
                 this.authExecutor.execute({ authenticator: this.context.authenticator }, authInputs)
                     .then((socketOwnerId) => {
                     socket.join(socketOwnerId, function () {
