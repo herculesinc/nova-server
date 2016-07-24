@@ -2,7 +2,7 @@
 // =================================================================================================
 import * as http from 'http';
 import * as socketio from 'socket.io';
-import { createApp, Router, SocketListener } from './../index';
+import { createApp, RouteController, SocketListener } from './../index';
 
 import * as actions from './actions';
 import * as adapters from './adapters';
@@ -19,9 +19,8 @@ import { MockRateLimiter } from './mocks/RateLimiter';
 // =================================================================================================
 const server = http.createServer();
 
-const router = new Router();
+const router = new RouteController();
 router.set('/', {
-    name            : 'root',
     get: {
         adapter     : adapters.helloWorldAdapter,
         action      : actions.helloWorldAction,

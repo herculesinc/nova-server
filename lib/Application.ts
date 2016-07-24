@@ -12,7 +12,7 @@ import {
     Executor, ExecutorContext, ActionContext, TooBusyError, RateOptions
 } from 'nova-base';
 
-import { Router } from './Router';
+import { RouteController } from './RouteController';
 import { SocketListener, symSocketAuthInputs } from './SocketListener';
 import { SocketNotifier } from './SocketNotifier';
 import { parseAuthHeader } from './util';
@@ -62,10 +62,10 @@ export class Application extends EventEmitter {
     webServer       : http.Server | https.Server;
     ioServer        : socketio.Server;
 
-    endpointRouters : Map<string, Router>;
+    routeControllers: Map<string, RouteController>;
     socketListeners : Map<string, SocketListener>;
 
-    eServer         : express.Application;
+    router          : express.Application;
     authExecutor    : Executor<string, string>;
 
     // CONSTRUCTOR
@@ -88,7 +88,7 @@ export class Application extends EventEmitter {
         this.setExecutorContext(options);
 
         // create router and listener maps
-        this.endpointRouters = new Map();
+        this.routeControllers = new Map();
         this.socketListeners = new Map();
         
         // initialize auth executor
@@ -102,16 +102,16 @@ export class Application extends EventEmitter {
     
     // PUBLIC METHODS
     // --------------------------------------------------------------------------------------------
-    register(root: string, router: Router);
+    register(root: string, router: RouteController);
     register(topic: string, listener: SocketListener)
-    register(path: string, routerOrListener: Router | SocketListener) {
+    register(path: string, routerOrListener: RouteController | SocketListener) {
         if (!path) throw new Error('Cannot register router or listener: path is undefined');
         if (!routerOrListener) throw new Error('Cannot register router or listener: router or listener is undefined');
 
-        if (routerOrListener instanceof Router) {
-            if (this.endpointRouters.has(path)) throw Error(`Path {${path}} has already been attached to a router`);
-            routerOrListener.attach(path, this.eServer, this.context);
-            this.endpointRouters.set(path, routerOrListener);
+        if (routerOrListener instanceof RouteController) {
+            if (this.routeControllers.has(path)) throw Error(`Path {${path}} has already been attached to a router`);
+            routerOrListener.attach(path, this.router, this.context);
+            this.routeControllers.set(path, routerOrListener);
         }
         else if (routerOrListener instanceof SocketListener) {
             if (this.socketListeners.has(path)) throw Error(`Topic {${path}} has been already attached to a listener`);
@@ -128,18 +128,18 @@ export class Application extends EventEmitter {
 
         // create express app
         this.webServer = options.server;
-        this.eServer = express();
+        this.router = express();
 
         // configure express app
-        this.eServer.set('trust proxy', options.trustProxy); 
-        this.eServer.set('x-powered-by', false);
-        this.eServer.set('etag', false);
+        this.router.set('trust proxy', options.trustProxy); 
+        this.router.set('x-powered-by', false);
+        this.router.set('etag', false);
 
         // calculate response time
-        this.eServer.use(responseTime({ digits: 0, suffix: false, header: headers.RSPONSE_TIME }));
+        this.router.use(responseTime({ digits: 0, suffix: false, header: headers.RSPONSE_TIME }));
 
         // set version header
-        this.eServer.use((request: express.Request, response: express.Response, next: Function) => {
+        this.router.use((request: express.Request, response: express.Response, next: Function) => {
             response.set({
                 [headers.SERVER_NAME]: this.name,
                 [headers.API_VERSION]: this.version
@@ -150,7 +150,7 @@ export class Application extends EventEmitter {
         // bind express app to the server
         this.webServer.on('request', (request, response) => {
             // use custom final handler with express
-            this.eServer(request, response, finalhandler(request, response, (error) => {
+            this.router(request, response, finalhandler(request, response, (error) => {
                 this.emit(ERROR_EVENT, error);
             }));
         });

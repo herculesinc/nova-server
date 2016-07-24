@@ -39,7 +39,7 @@ function send(request, response, status, headers, body) {
     function write() {
         // response status
         response.statusCode = status;
-        //res.statusMessage = statuses[status];
+        // response.statusMessage = STATUS_CODES[status];
         // response headers
         if (headers) {
             for (let key in headers) {
@@ -48,7 +48,7 @@ function send(request, response, status, headers, body) {
         }
         // standard headers
         response.setHeader('Content-Type', 'application/json; charset=utf-8');
-        //res.setHeader('Content-Length', Buffer.byteLength(body, 'utf8'))
+        // response.setHeader('Content-Length', Buffer.byteLength(body, 'utf8').toString(10));
         if (request.method === 'HEAD') {
             response.end();
         }

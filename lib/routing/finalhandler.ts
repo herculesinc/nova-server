@@ -1,6 +1,6 @@
 // IMPORTS
 // =================================================================================================
-import { IncomingMessage, ServerResponse } from 'http';
+import { IncomingMessage, ServerResponse, STATUS_CODES } from 'http';
 import * as onFinished from 'on-finished';
 import * as unpipe from 'unpipe';
 import { Exception, InvalidEndpointError, HttpStatusCode } from 'nova-base';
@@ -49,7 +49,7 @@ function send(request: IncomingMessage, response: ServerResponse, status: number
     function write () {
         // response status
         response.statusCode = status;
-        //res.statusMessage = statuses[status];
+        // response.statusMessage = STATUS_CODES[status];
 
         // response headers
         if (headers) {
@@ -60,7 +60,7 @@ function send(request: IncomingMessage, response: ServerResponse, status: number
 
         // standard headers
         response.setHeader('Content-Type', 'application/json; charset=utf-8')
-        //res.setHeader('Content-Length', Buffer.byteLength(body, 'utf8'))
+        // response.setHeader('Content-Length', Buffer.byteLength(body, 'utf8').toString(10));
 
         if (request.method === 'HEAD') {
             response.end();

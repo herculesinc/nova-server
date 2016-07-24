@@ -5,7 +5,7 @@ const socketio = require('socket.io');
 const responseTime = require('response-time');
 const toobusy = require('toobusy-js');
 const nova_base_1 = require('nova-base');
-const Router_1 = require('./Router');
+const RouteController_1 = require('./RouteController');
 const SocketListener_1 = require('./SocketListener');
 const SocketNotifier_1 = require('./SocketNotifier');
 const util_1 = require('./util');
@@ -37,7 +37,7 @@ class Application extends events_1.EventEmitter {
         // initlize context
         this.setExecutorContext(options);
         // create router and listener maps
-        this.endpointRouters = new Map();
+        this.routeControllers = new Map();
         this.socketListeners = new Map();
         // initialize auth executor
         this.authExecutor = new nova_base_1.Executor(this.context, authenticateSocket, socketAuthAdapter);
@@ -51,11 +51,11 @@ class Application extends events_1.EventEmitter {
             throw new Error('Cannot register router or listener: path is undefined');
         if (!routerOrListener)
             throw new Error('Cannot register router or listener: router or listener is undefined');
-        if (routerOrListener instanceof Router_1.Router) {
-            if (this.endpointRouters.has(path))
+        if (routerOrListener instanceof RouteController_1.RouteController) {
+            if (this.routeControllers.has(path))
                 throw Error(`Path {${path}} has already been attached to a router`);
-            routerOrListener.attach(path, this.eServer, this.context);
-            this.endpointRouters.set(path, routerOrListener);
+            routerOrListener.attach(path, this.router, this.context);
+            this.routeControllers.set(path, routerOrListener);
         }
         else if (routerOrListener instanceof SocketListener_1.SocketListener) {
             if (this.socketListeners.has(path))
@@ -71,15 +71,15 @@ class Application extends events_1.EventEmitter {
     setWebServer(options) {
         // create express app
         this.webServer = options.server;
-        this.eServer = express();
+        this.router = express();
         // configure express app
-        this.eServer.set('trust proxy', options.trustProxy);
-        this.eServer.set('x-powered-by', false);
-        this.eServer.set('etag', false);
+        this.router.set('trust proxy', options.trustProxy);
+        this.router.set('x-powered-by', false);
+        this.router.set('etag', false);
         // calculate response time
-        this.eServer.use(responseTime({ digits: 0, suffix: false, header: headers.RSPONSE_TIME }));
+        this.router.use(responseTime({ digits: 0, suffix: false, header: headers.RSPONSE_TIME }));
         // set version header
-        this.eServer.use((request, response, next) => {
+        this.router.use((request, response, next) => {
             response.set({
                 [headers.SERVER_NAME]: this.name,
                 [headers.API_VERSION]: this.version
@@ -89,7 +89,7 @@ class Application extends events_1.EventEmitter {
         // bind express app to the server
         this.webServer.on('request', (request, response) => {
             // use custom final handler with express
-            this.eServer(request, response, finalhandler_1.finalhandler(request, response, (error) => {
+            this.router(request, response, finalhandler_1.finalhandler(request, response, (error) => {
                 this.emit(ERROR_EVENT, error);
             }));
         });
