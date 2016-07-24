@@ -16,12 +16,12 @@ declare module "nova-server" {
     export interface AppConfig {
         name            : string;
         version         : string;
-        webServer       : WebServerConfig;
-        ioServer        : socketio.ServerOptions;
-        authenticator   : nova.Authenticator;
+        webServer?      : WebServerConfig;
+        ioServer?       : socketio.ServerOptions;
+        authenticator?  : nova.Authenticator;
         database        : nova.Database;
-        cache           : nova.Cache;
-        dispatcher      : nova.Dispatcher;
+        cache?          : nova.Cache;
+        dispatcher?     : nova.Dispatcher;
         limiter?        : nova.RateLimiter;
         rateLimits?     : nova.RateOptions;
         logger?         : nova.Logger;

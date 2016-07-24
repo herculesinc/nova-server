@@ -17,8 +17,6 @@ import { MockRateLimiter } from './mocks/RateLimiter';
 
 // PERPARATIONS
 // =================================================================================================
-const server = http.createServer();
-
 const router = new RouteController();
 router.set('/', {
     get: {
@@ -39,11 +37,6 @@ listener.on('hello', {
 const app = createApp({
     name            : 'API Server',
     version         : '0.0.1',
-    webServer: {
-        server      : server,
-        trustProxy  : true
-    },
-    ioServer        : undefined, // will create a default socket.io server
     authenticator   : authenticator,
     database        : new MockDatabase(),
     cache           : new MockCache(),
@@ -62,10 +55,14 @@ app.register('/', router);
 app.register('/', listener);
 
 // start the server
-server.listen(3000, function () {
+app.webServer.listen(3000, function () {
     console.log('Server started');
 });
 
 app.on('error', function(error) {
     console.log(error.stack);
+});
+
+app.on('lag', function(lag) {
+    console.log('Server lag detected: ' + lag);
 });

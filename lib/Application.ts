@@ -29,17 +29,21 @@ const headers = {
     RSPONSE_TIME: 'X-Response-Time'
 };
 
+const DEFAULT_WEB_SERVER_CONFIG: WebServerConfig = {
+    trustProxy  : true
+};
+
 // INTERFACES
 // =================================================================================================
 export interface AppConfig {
     name            : string;
     version         : string;
-    webServer       : WebServerConfig;
+    webServer?      : WebServerConfig;
     ioServer?       : socketio.ServerOptions;
-    authenticator   : Authenticator;
+    authenticator?  : Authenticator;
     database        : Database;
-    cache           : Cache;
-    dispatcher      : Dispatcher;
+    cache?          : Cache;
+    dispatcher?     : Dispatcher;
     limiter?        : RateLimiter;
     rateLimits?     : RateOptions;
     logger?         : Logger;
@@ -47,7 +51,7 @@ export interface AppConfig {
 }
 
 export interface WebServerConfig {
-    server          : http.Server | https.Server;
+    server?         : http.Server | https.Server;
     trustProxy?     : boolean | string | number;
 }
 
@@ -125,9 +129,10 @@ export class Application extends EventEmitter {
     // PRIVATE METHODS
     // --------------------------------------------------------------------------------------------
     private setWebServer(options: WebServerConfig) {
+        options = Object.assign({}, DEFAULT_WEB_SERVER_CONFIG, options);
 
         // create express app
-        this.webServer = options.server;
+        this.webServer = options.server || http.createServer();
         this.router = express();
 
         // configure express app
@@ -212,7 +217,12 @@ export class Application extends EventEmitter {
 // HELPER FUNCTIONS
 // =================================================================================================
 function validateOptions(options: AppConfig): AppConfig {
-    // TODO: validate options
+    if (!options) throw new TypeError('Cannot create an app: options are undefined');
+    options = Object.assign({}, options);
+
+    if (!options.name) throw new TypeError('Cannot create an app: name is undefined');
+    if (!options.version) throw new TypeError('Cannot create an app: version is undefined');
+
     return options;
 }
 

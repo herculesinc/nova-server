@@ -1,4 +1,7 @@
 "use strict";
+// IMPORTS
+// =================================================================================================
+const http = require('http');
 const events_1 = require('events');
 const express = require('express');
 const socketio = require('socket.io');
@@ -18,6 +21,9 @@ const headers = {
     SERVER_NAME: 'X-Server-Name',
     API_VERSION: 'X-Api-Version',
     RSPONSE_TIME: 'X-Response-Time'
+};
+const DEFAULT_WEB_SERVER_CONFIG = {
+    trustProxy: true
 };
 // CLASS DEFINITION
 // =================================================================================================
@@ -69,8 +75,9 @@ class Application extends events_1.EventEmitter {
     // PRIVATE METHODS
     // --------------------------------------------------------------------------------------------
     setWebServer(options) {
+        options = Object.assign({}, DEFAULT_WEB_SERVER_CONFIG, options);
         // create express app
-        this.webServer = options.server;
+        this.webServer = options.server || http.createServer();
         this.router = express();
         // configure express app
         this.router.set('trust proxy', options.trustProxy);
@@ -115,12 +122,12 @@ class Application extends events_1.EventEmitter {
                     });
                 })
                     .catch((error) => {
-                    this.emit(ERROR_EVENT, error);
+                    setImmediate(this.emit(ERROR_EVENT, error));
                     next(error);
                 });
             }
             catch (error) {
-                this.emit(ERROR_EVENT, error);
+                setImmediate(this.emit(ERROR_EVENT, error));
                 next(error);
             }
         });
@@ -146,7 +153,13 @@ exports.Application = Application;
 // HELPER FUNCTIONS
 // =================================================================================================
 function validateOptions(options) {
-    // TODO: validate options
+    if (!options)
+        throw new TypeError('Cannot create an app: options are undefined');
+    options = Object.assign({}, options);
+    if (!options.name)
+        throw new TypeError('Cannot create an app: name is undefined');
+    if (!options.version)
+        throw new TypeError('Cannot create an app: version is undefined');
     return options;
 }
 function socketAuthAdapter(inputs, authInfo) {
