@@ -1,10 +1,12 @@
 // IMPORTS
 // =================================================================================================
+import * as http from 'http';
 import { 
     Action, ActionAdapter, Executor, ExecutorContext, ExecutionOptions, AuthInputs, RateOptions,
     DaoOptions, HttpStatusCode, Exception, validate, TooBusyError
 } from 'nova-base';
-import { Application as ExpressApp, RequestHandler, Request, Response } from 'express';
+//import { Application as ExpressApp, RequestHandler, Request, Response } from 'express';
+
 import * as bodyParser from 'body-parser';
 import * as multer from 'multer';
 import * as toobusy from 'toobusy-js';
@@ -12,28 +14,57 @@ import * as toobusy from 'toobusy-js';
 import { defaults } from './../index';
 import { parseAuthHeader } from './util';
 
+// INTERFACES
+// =================================================================================================
+interface Request extends http.IncomingMessage {
+    query   : any;
+    params  : any;
+    path    : string;
+    ip      : string;
+    body    : any;
+    files   : any;
+}
+
+interface Response extends http.ServerResponse {
+    json(body: any);
+    sendStatus(status: number);
+}
+
+interface RequestHandler {
+    (req: Request, res: Response, next: (err?: any) => void): any;
+}
+
 // MODULE VARIABLES
 // =================================================================================================
 const DEFAULT_JSON_PARSER: RequestHandler = bodyParser.json();
 
 const BODY_TYPE_CHECKERS = {
     json: function(request: Request, response: Response, next: Function) {
+        next();
+        /*
         return !request.headers['content-type'] || request.is('json') !== false
             ? next()
             : next(new Exception(`Only JSON body is supported for this request`, HttpStatusCode.UnsupportedContent));
+        */
     },
     files: function(request: Request, response: Response, next: Function) {
+        next();
+        /*
         return request.is('multipart')
             ? next()
             : next(new Exception(`Only multipart body is supported for this request`, HttpStatusCode.UnsupportedContent));
+        */
     }
 };
 
 const ACCPET_TYPE_CHECKER = {
     json: function(request: Request, response: Response, next: Function) {
+        next();
+        /*
         return request.accepts('json')
             ? next()
             : next(new Exception(`Only JSON response can be returned from this endpoint`, HttpStatusCode.NotAcceptable));
+        */
     } 
 };
 
@@ -143,11 +174,11 @@ export class Router {
 
             server.all(this.root, function(request: Request, response: Response, next: Function) {
                 // add CORS response headers for all requests
-                response.header('Access-Control-Allow-Methods', allowedMethods);
-                response.header('Access-Control-Allow-Origin', corsOptions.origin);
-                response.header('Access-Control-Allow-Headers', allowedHeaders);
-                response.header('Access-Control-Allow-Credentials', corsOptions.credentials);
-                response.header('Access-Control-Max-Age', corsOptions.maxAge);
+                response.setHeader('Access-Control-Allow-Methods', allowedMethods);
+                response.setHeader('Access-Control-Allow-Origin', corsOptions.origin);
+                response.setHeader('Access-Control-Allow-Headers', allowedHeaders);
+                response.setHeader('Access-Control-Allow-Credentials', corsOptions.credentials);
+                response.setHeader('Access-Control-Max-Age', corsOptions.maxAge);
                 
                 if (request.method === 'OPTIONS') {
                     // immediately end OPTION requests
@@ -193,7 +224,7 @@ export class Router {
 
             // catch unsupported method requests
             server.all(this.root, function(request: Request, response: Response, next: Function) {
-                const message = `Method ${request.method} is not allowed for ${request.baseUrl}`;
+                const message = `Method ${request.method} is not allowed for ${request.path}`;
                 next(new Exception(message, HttpStatusCode.NotAllowed));
             });
         }

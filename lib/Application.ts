@@ -3,7 +3,7 @@
 import * as http from 'http';
 import * as https from 'https';
 import { EventEmitter } from 'events';
-import * as express from 'express';
+
 import * as socketio from 'socket.io';
 import * as responseTime from 'response-time';
 import * as toobusy from 'toobusy-js';

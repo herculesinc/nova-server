@@ -5,4 +5,5 @@
 /// <reference path="multer/multer.d.ts" />
 /// <reference path="serve-static/serve-static.d.ts" />
 /// <reference path="body-parser/body-parser.d.ts" />
+/// <reference path="finalhandler/finalhandler.d.ts" />
 /// <reference path="socket.io/socket.io.d.ts" />
