@@ -31,9 +31,11 @@
     "express": "4.14.x",
     "multer": "1.1.x",
     "nova-base": "0.4.x",
+    "on-finished": "2.3.x",
     "response-time": "2.3.x",
     "socket.io": "1.4.x",
-    "toobusy-js": "0.5.x"
+    "toobusy-js": "0.5.x",
+    "unpipe": "1.0.0"
   },
   "devDependencies": {
     "del": "2.2.x",

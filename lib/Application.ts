@@ -16,6 +16,7 @@ import { Router } from './Router';
 import { SocketListener, symSocketAuthInputs } from './SocketListener';
 import { SocketNotifier } from './SocketNotifier';
 import { parseAuthHeader } from './util';
+import { finalhandler } from './routing/finalhandler';
 
 // MODULE VARIABLES
 // =================================================================================================
@@ -121,27 +122,6 @@ export class Application extends EventEmitter {
         }    
     }
 
-    start() {
-        // chatch all unresolved requests
-        this.eServer.use(function (request: express.Request, response: express.Response, next: Function) {
-            next(new Exception(`Endpoint ${request.path} does not exist`, HttpStatusCode.NotFound));
-        });
-
-        // attach error handler
-        this.eServer.use((error: any, request: express.Request, response: express.Response, next: Function) => {
-            
-            // fire error event
-            this.emit(ERROR_EVENT, error);
-
-            // end response
-            response.status(error.status || HttpStatusCode.InternalServerError);
-            response.json( (error instanceof Exception) 
-                ? error 
-                : { name: error.name, message: error.message }
-            );
-        });
-    }
-
     // PRIVATE METHODS
     // --------------------------------------------------------------------------------------------
     private setWebServer(options: WebServerConfig) {
@@ -168,7 +148,12 @@ export class Application extends EventEmitter {
         });
 
         // bind express app to the server
-        this.webServer.on('request', this.eServer);
+        this.webServer.on('request', (request, response) => {
+            // use custom final handler with express
+            this.eServer(request, response, finalhandler(request, response, (error) => {
+                this.emit(ERROR_EVENT, error);
+            }));
+        });
     }
 
     private setIoServer(options?: socketio.ServerOptions) {

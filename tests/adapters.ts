@@ -12,6 +12,6 @@ interface HelloWorldInputs {
 
 export function helloWorldAdapter(this: ActionContext, inputs: any, authInfo: User): Promise<HelloWorldInputs> {
     validate.inputs(inputs.author, 'Author must be provided');
-
+    validate.authorized(authInfo, 'Authorization required');
     return Promise.resolve({ user: authInfo, author: inputs.author});
 }

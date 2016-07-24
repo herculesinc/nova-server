@@ -55,7 +55,7 @@ export class SocketListener {
         this.handlers.set(event, config);
     }
 
-    attach(topic: string, io: SocketIO.Server, context: ExecutorContext, errorHandler: (error: Error) => void) {
+    attach(topic: string, io: SocketIO.Server, context: ExecutorContext, onerror: (error: Error) => void) {
         // check if the listener has already been attached
         if (this.topic) throw new Error(`Listener has alread been bound to ${this.topic} topic`);
 
@@ -69,14 +69,14 @@ export class SocketListener {
         io.of(topic).on(CONNECT_EVENT, (socket) => {
             // attach event handlers handlers
             for (let [event, config] of this.handlers) {
-                socket.on(event, this.buildEventHandler(config, socket, errorHandler));
+                socket.on(event, this.buildEventHandler(config, socket, onerror));
             }
         });
     }
 
     // PRIVATE METHODS
     // --------------------------------------------------------------------------------------------
-    private buildEventHandler(config: HandlerConfig<any,any>, socket: SocketIO.Socket, errorHandler: (error: Error) => void): SocketEventHandler {
+    private buildEventHandler(config: HandlerConfig<any,any>, socket: SocketIO.Socket, onerror: (error: Error) => void): SocketEventHandler {
         if (!config || !socket) return;
 
         // build execution options
@@ -95,7 +95,7 @@ export class SocketListener {
             // check if the server is too busy
             if (toobusy()) {
                 const error = new TooBusyError();
-                errorHandler(error);
+                setImmediate(onerror, error);
                 return callback(error);
             }
             
@@ -105,7 +105,7 @@ export class SocketListener {
             executor.execute(inputs, authInputs)
                 .then((result) => callback(undefined))
                 .catch((error) => {
-                    errorHandler(error);
+                    setImmediate(onerror, error);
                     callback(error);
                 });
         }

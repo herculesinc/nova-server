@@ -61,7 +61,6 @@ const app = createApp({
 // attach routers
 app.register('/', router);
 app.register('/', listener);
-app.start();
 
 // start the server
 server.listen(3000, function () {

@@ -43,8 +43,6 @@ declare module "nova-server" {
         register(root: string, router: Router);
         register(topic: string, listener: SocketListener);
 
-        start();
-
         on(event: 'error', callback: (error: Error) => void);
         on(event: 'lag', callback: (lag: number) => void);
     }

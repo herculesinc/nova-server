@@ -9,6 +9,7 @@ const Router_1 = require('./Router');
 const SocketListener_1 = require('./SocketListener');
 const SocketNotifier_1 = require('./SocketNotifier');
 const util_1 = require('./util');
+const finalhandler_1 = require('./routing/finalhandler');
 // MODULE VARIABLES
 // =================================================================================================
 const ERROR_EVENT = 'error';
@@ -65,22 +66,6 @@ class Application extends events_1.EventEmitter {
             this.socketListeners.set(path, routerOrListener);
         }
     }
-    start() {
-        // chatch all unresolved requests
-        this.eServer.use(function (request, response, next) {
-            next(new nova_base_1.Exception(`Endpoint ${request.path} does not exist`, 404 /* NotFound */));
-        });
-        // attach error handler
-        this.eServer.use((error, request, response, next) => {
-            // fire error event
-            this.emit(ERROR_EVENT, error);
-            // end response
-            response.status(error.status || 500 /* InternalServerError */);
-            response.json((error instanceof nova_base_1.Exception)
-                ? error
-                : { name: error.name, message: error.message });
-        });
-    }
     // PRIVATE METHODS
     // --------------------------------------------------------------------------------------------
     setWebServer(options) {
@@ -102,7 +87,12 @@ class Application extends events_1.EventEmitter {
             next();
         });
         // bind express app to the server
-        this.webServer.on('request', this.eServer);
+        this.webServer.on('request', (request, response) => {
+            // use custom final handler with express
+            this.eServer(request, response, finalhandler_1.finalhandler(request, response, (error) => {
+                this.emit(ERROR_EVENT, error);
+            }));
+        });
     }
     setIoServer(options) {
         // create the socket IO server
