@@ -6,7 +6,6 @@ declare module "nova-server" {
     import * as https from 'https';
     import * as events from 'events';
     import * as socketio from 'socket.io';
-    import { RequestHandler } from 'express';
     import * as nova from 'nova-base';
 
     export * from 'nova-base';
@@ -137,6 +136,25 @@ declare module "nova-server" {
     export interface LoadControllerConfig {
         interval: number;
         maxLag  : number;
+    }
+
+    // REQUEST HANDLER
+    // --------------------------------------------------------------------------------------------
+    export interface Request extends http.IncomingMessage {
+        query   : { [index: string]: string };
+        params  : { [index: string]: string };
+        path    : string;
+        ip      : string;
+        body?   : any;
+        files?  : any;
+    }
+
+    export interface Response extends http.ServerResponse {
+        
+    }
+
+    export interface RequestHandler {
+        (request: Request, response: Response, next?: (error?: Error) => void): any;
     }
 
     // PUBLIC FUNCTIONS

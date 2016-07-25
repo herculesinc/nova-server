@@ -4,7 +4,9 @@ import {
     Action, ActionAdapter, Executor, ExecutorContext, ExecutionOptions, AuthInputs, RateOptions,
     DaoOptions, HttpStatusCode, Exception, validate, TooBusyError, UnsupportedMethodError
 } from 'nova-base';
-import { Application as ExpressApp, RequestHandler, Request, Response } from 'express';
+import { Router, RequestHandler, Request, Response } from 'router';
+import * as accepts from 'accepts';
+import * as typeIs from 'type-is';
 import * as bodyParser from 'body-parser';
 import * as multer from 'multer';
 import * as toobusy from 'toobusy-js';
@@ -18,12 +20,12 @@ const DEFAULT_JSON_PARSER: RequestHandler = bodyParser.json();
 
 const BODY_TYPE_CHECKERS = {
     json: function(request: Request, response: Response, next: Function) {
-        return !request.headers['content-type'] || request.is('json') !== false
+        return !request.headers['content-type'] || typeIs(request, ['json']) !== false
             ? next()
             : next(new Exception(`Only JSON body is supported for this request`, HttpStatusCode.UnsupportedContent));
     },
     files: function(request: Request, response: Response, next: Function) {
-        return request.is('multipart')
+        return typeIs(request, ['multipart'])
             ? next()
             : next(new Exception(`Only multipart body is supported for this request`, HttpStatusCode.UnsupportedContent));
     }
@@ -31,10 +33,11 @@ const BODY_TYPE_CHECKERS = {
 
 const ACCPET_TYPE_CHECKER = {
     json: function(request: Request, response: Response, next: Function) {
-        return request.accepts('json')
+        const checker = accepts(request);
+        return checker.type(['json'])
             ? next()
             : next(new Exception(`Only JSON response can be returned from this endpoint`, HttpStatusCode.NotAcceptable));
-    } 
+    }
 };
 
 // INTERFACES
@@ -123,7 +126,7 @@ export class RouteController {
         this.routes.set(path, config);
     }
 
-    attach(root: string, router: ExpressApp, context: ExecutorContext) {
+    attach(root: string, router: Router, context: ExecutorContext) {
         // check if the controller has already been attached
         if (this.root) throw new Error(`Controller has alread been bound to ${this.root} root`);
 
@@ -137,20 +140,21 @@ export class RouteController {
         // attach route handlers to the router
         for (let [subpath, config] of this.routes) {
             const methods = ['OPTIONS'];
-            const fullpath = this.root + subpath;
+            const route = router.route(this.root + subpath);
             const corsOptions: CorsOptions = Object.assign({}, defaults.CORS, config.cors);
 
-            router.all(this.root, function(request: Request, response: Response, next: Function) {
+            route.all(function(request: Request, response: Response, next: Function) {
                 // add CORS response headers for all requests
-                response.header('Access-Control-Allow-Methods', allowedMethods);
-                response.header('Access-Control-Allow-Origin', corsOptions.origin);
-                response.header('Access-Control-Allow-Headers', allowedHeaders);
-                response.header('Access-Control-Allow-Credentials', corsOptions.credentials);
-                response.header('Access-Control-Max-Age', corsOptions.maxAge);
+                response.setHeader('Access-Control-Allow-Methods', allowedMethods);
+                response.setHeader('Access-Control-Allow-Origin', corsOptions.origin);
+                response.setHeader('Access-Control-Allow-Headers', allowedHeaders);
+                response.setHeader('Access-Control-Allow-Credentials', corsOptions.credentials);
+                response.setHeader('Access-Control-Max-Age', corsOptions.maxAge);
                 
                 if (request.method === 'OPTIONS') {
                     // immediately end OPTION requests
-                    response.sendStatus(HttpStatusCode.OK);
+                    response.statusCode = HttpStatusCode.OK;
+                    response.end();
                 }
                 else {
                     // log the request
@@ -162,27 +166,27 @@ export class RouteController {
             });
 
             if (config.get) {
-                router.get(fullpath, ...this.buildEndpointHandlers(config.get, true));
+                route.get(...this.buildEndpointHandlers(config.get, true));
                 methods.push('GET');
             }
 
             if (config.post) {
-                router.post(fullpath, ...this.buildEndpointHandlers(config.post));
+                route.post(...this.buildEndpointHandlers(config.post));
                 methods.push('POST');
             }
 
             if (config.put) {
-                router.put(fullpath, ...this.buildEndpointHandlers(config.put));
+                route.put(...this.buildEndpointHandlers(config.put));
                 methods.push('PUT');
             }
 
             if (config.patch) {
-                router.patch(fullpath, ...this.buildEndpointHandlers(config.patch));
+                route.patch(...this.buildEndpointHandlers(config.patch));
                 methods.push('PATCH');
             }
 
             if (config.delete) {
-                router.delete(fullpath, ...this.buildEndpointHandlers(config.delete));
+                route.delete(...this.buildEndpointHandlers(config.delete));
                 methods.push('DELETE');
             }
 
@@ -191,7 +195,7 @@ export class RouteController {
             var allowedHeaders = corsOptions.headers.join(',');
 
             // catch unsupported method requests
-            router.all(this.root, function(request: Request, response: Response, next: Function) {
+            route.all(function(request: Request, response: Response, next: Function) {
                 next(new UnsupportedMethodError(request.method, request.path));
             });
         }
@@ -236,7 +240,7 @@ export class RouteController {
 
                 // check authorization header
                 let requestor: AuthInputs | string;
-                const authHeader = request.headers['authorization'];
+                const authHeader = request.headers['authorization'] || request.headers['Authorization'];
                 if (authHeader) {
                     // if header is present, build auth inputs
                     requestor = parseAuthHeader(authHeader);
@@ -255,10 +259,14 @@ export class RouteController {
                         ? config.response(result)
                         : config.response.view(result, config.response.options);
                     if (!view) throw new Exception('Resource not found', HttpStatusCode.NotFound);
-                    response.json(view);
+
+                    response.statusCode = HttpStatusCode.OK;
+                    response.setHeader('Content-Type', 'application/json; charset=utf-8');
+                    response.end(JSON.stringify(view), 'utf8')
                 }
                 else {
-                    response.sendStatus(HttpStatusCode.NoContent);
+                    response.statusCode = HttpStatusCode.NoContent;
+                    response.end();
                 }
             }
             catch (error) {

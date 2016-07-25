@@ -1,6 +1,7 @@
 "use strict";
 // IMPORTS
 // =================================================================================================
+const proxyaddr = require('proxy-addr');
 const nova_base_1 = require('nova-base');
 // AUTH
 // =================================================================================================
@@ -14,4 +15,24 @@ function parseAuthHeader(header) {
     };
 }
 exports.parseAuthHeader = parseAuthHeader;
+// PROXY
+// =================================================================================================
+function compileTrust(val) {
+    if (typeof val === 'function')
+        return val;
+    if (val === true) {
+        // Support plain true/false
+        return function () { return true; };
+    }
+    if (typeof val === 'number') {
+        // Support trusting hop count
+        return function (a, i) { return i < val; };
+    }
+    if (typeof val === 'string') {
+        // Support comma-separated values
+        val = val.split(/ *, */);
+    }
+    return proxyaddr.compile(val || []);
+}
+exports.compileTrust = compileTrust;
 //# sourceMappingURL=util.js.map

@@ -3,9 +3,8 @@
 import * as http from 'http';
 import * as https from 'https';
 import { EventEmitter } from 'events';
-import * as express from 'express';
+import * as Router from 'router';
 import * as socketio from 'socket.io';
-import * as responseTime from 'response-time';
 import * as toobusy from 'toobusy-js';
 import {
     Database, Cache, Dispatcher, Authenticator, RateLimiter, Logger, Exception, HttpStatusCode,
@@ -16,18 +15,13 @@ import { RouteController } from './RouteController';
 import { SocketListener, symSocketAuthInputs } from './SocketListener';
 import { SocketNotifier } from './SocketNotifier';
 import { parseAuthHeader } from './util';
+import { firsthandler } from './routing/firsthandler';
 import { finalhandler } from './routing/finalhandler';
 
 // MODULE VARIABLES
 // =================================================================================================
 const ERROR_EVENT = 'error';
 const LAG_EVENT = 'lag';
-
-const headers = {
-    SERVER_NAME : 'X-Server-Name',
-    API_VERSION : 'X-Api-Version',
-    RSPONSE_TIME: 'X-Response-Time'
-};
 
 const DEFAULT_WEB_SERVER_CONFIG: WebServerConfig = {
     trustProxy  : true
@@ -69,7 +63,7 @@ export class Application extends EventEmitter {
     routeControllers: Map<string, RouteController>;
     socketListeners : Map<string, SocketListener>;
 
-    router          : express.Application;
+    router          : Router.Router;
     authExecutor    : Executor<string, string>;
 
     // CONSTRUCTOR
@@ -106,23 +100,23 @@ export class Application extends EventEmitter {
     
     // PUBLIC METHODS
     // --------------------------------------------------------------------------------------------
-    register(root: string, router: RouteController);
+    register(root: string, controller: RouteController);
     register(topic: string, listener: SocketListener)
-    register(path: string, routerOrListener: RouteController | SocketListener) {
-        if (!path) throw new Error('Cannot register router or listener: path is undefined');
-        if (!routerOrListener) throw new Error('Cannot register router or listener: router or listener is undefined');
+    register(path: string, controllerOrListener: RouteController | SocketListener) {
+        if (!path) throw new Error('Cannot register controller or listener: path is undefined');
+        if (!controllerOrListener) throw new Error('Cannot register controller or listener: router or listener is undefined');
 
-        if (routerOrListener instanceof RouteController) {
+        if (controllerOrListener instanceof RouteController) {
             if (this.routeControllers.has(path)) throw Error(`Path {${path}} has already been attached to a router`);
-            routerOrListener.attach(path, this.router, this.context);
-            this.routeControllers.set(path, routerOrListener);
+            controllerOrListener.attach(path, this.router, this.context);
+            this.routeControllers.set(path, controllerOrListener);
         }
-        else if (routerOrListener instanceof SocketListener) {
+        else if (controllerOrListener instanceof SocketListener) {
             if (this.socketListeners.has(path)) throw Error(`Topic {${path}} has been already attached to a listener`);
-            routerOrListener.attach(path, this.ioServer, this.context, (error: Error) => {
+            controllerOrListener.attach(path, this.ioServer, this.context, (error: Error) => {
                 this.emit(ERROR_EVENT, error);
             });
-            this.socketListeners.set(path, routerOrListener);
+            this.socketListeners.set(path, controllerOrListener);
         }    
     }
 
@@ -133,24 +127,10 @@ export class Application extends EventEmitter {
 
         // create express app
         this.webServer = options.server || http.createServer();
-        this.router = express();
+        this.router = Router();
 
-        // configure express app
-        this.router.set('trust proxy', options.trustProxy); 
-        this.router.set('x-powered-by', false);
-        this.router.set('etag', false);
-
-        // calculate response time
-        this.router.use(responseTime({ digits: 0, suffix: false, header: headers.RSPONSE_TIME }));
-
-        // set version header
-        this.router.use((request: express.Request, response: express.Response, next: Function) => {
-            response.set({
-                [headers.SERVER_NAME]: this.name,
-                [headers.API_VERSION]: this.version
-            });
-            next();
-        });
+        // attache the first handler
+        this.router.use(firsthandler(this.name, this.version, options)); 
 
         // bind express app to the server
         this.webServer.on('request', (request, response) => {

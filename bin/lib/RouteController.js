@@ -10,6 +10,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 // IMPORTS
 // =================================================================================================
 const nova_base_1 = require('nova-base');
+const accepts = require('accepts');
+const typeIs = require('type-is');
 const bodyParser = require('body-parser');
 const multer = require('multer');
 const toobusy = require('toobusy-js');
@@ -20,19 +22,20 @@ const util_1 = require('./util');
 const DEFAULT_JSON_PARSER = bodyParser.json();
 const BODY_TYPE_CHECKERS = {
     json: function (request, response, next) {
-        return !request.headers['content-type'] || request.is('json') !== false
+        return !request.headers['content-type'] || typeIs(request, ['json']) !== false
             ? next()
             : next(new nova_base_1.Exception(`Only JSON body is supported for this request`, 415 /* UnsupportedContent */));
     },
     files: function (request, response, next) {
-        return request.is('multipart')
+        return typeIs(request, ['multipart'])
             ? next()
             : next(new nova_base_1.Exception(`Only multipart body is supported for this request`, 415 /* UnsupportedContent */));
     }
 };
 const ACCPET_TYPE_CHECKER = {
     json: function (request, response, next) {
-        return request.accepts('json')
+        const checker = accepts(request);
+        return checker.type(['json'])
             ? next()
             : next(new nova_base_1.Exception(`Only JSON response can be returned from this endpoint`, 406 /* NotAcceptable */));
     }
@@ -69,18 +72,19 @@ class RouteController {
         // attach route handlers to the router
         for (let [subpath, config] of this.routes) {
             const methods = ['OPTIONS'];
-            const fullpath = this.root + subpath;
+            const route = router.route(this.root + subpath);
             const corsOptions = Object.assign({}, index_1.defaults.CORS, config.cors);
-            router.all(this.root, function (request, response, next) {
+            route.all(function (request, response, next) {
                 // add CORS response headers for all requests
-                response.header('Access-Control-Allow-Methods', allowedMethods);
-                response.header('Access-Control-Allow-Origin', corsOptions.origin);
-                response.header('Access-Control-Allow-Headers', allowedHeaders);
-                response.header('Access-Control-Allow-Credentials', corsOptions.credentials);
-                response.header('Access-Control-Max-Age', corsOptions.maxAge);
+                response.setHeader('Access-Control-Allow-Methods', allowedMethods);
+                response.setHeader('Access-Control-Allow-Origin', corsOptions.origin);
+                response.setHeader('Access-Control-Allow-Headers', allowedHeaders);
+                response.setHeader('Access-Control-Allow-Credentials', corsOptions.credentials);
+                response.setHeader('Access-Control-Max-Age', corsOptions.maxAge);
                 if (request.method === 'OPTIONS') {
                     // immediately end OPTION requests
-                    response.sendStatus(200 /* OK */);
+                    response.statusCode = 200 /* OK */;
+                    response.end();
                 }
                 else {
                     // log the request
@@ -90,30 +94,30 @@ class RouteController {
                 }
             });
             if (config.get) {
-                router.get(fullpath, ...this.buildEndpointHandlers(config.get, true));
+                route.get(...this.buildEndpointHandlers(config.get, true));
                 methods.push('GET');
             }
             if (config.post) {
-                router.post(fullpath, ...this.buildEndpointHandlers(config.post));
+                route.post(...this.buildEndpointHandlers(config.post));
                 methods.push('POST');
             }
             if (config.put) {
-                router.put(fullpath, ...this.buildEndpointHandlers(config.put));
+                route.put(...this.buildEndpointHandlers(config.put));
                 methods.push('PUT');
             }
             if (config.patch) {
-                router.patch(fullpath, ...this.buildEndpointHandlers(config.patch));
+                route.patch(...this.buildEndpointHandlers(config.patch));
                 methods.push('PATCH');
             }
             if (config.delete) {
-                router.delete(fullpath, ...this.buildEndpointHandlers(config.delete));
+                route.delete(...this.buildEndpointHandlers(config.delete));
                 methods.push('DELETE');
             }
             // these variables are used in the server.all() handler above
             var allowedMethods = methods.join(',');
             var allowedHeaders = corsOptions.headers.join(',');
             // catch unsupported method requests
-            router.all(this.root, function (request, response, next) {
+            route.all(function (request, response, next) {
                 next(new nova_base_1.UnsupportedMethodError(request.method, request.path));
             });
         }
@@ -152,7 +156,7 @@ class RouteController {
                     nova_base_1.validate.inputs(!selector || executor, `No actions found for the specified ${selector}`);
                     // check authorization header
                     let requestor;
-                    const authHeader = request.headers['authorization'];
+                    const authHeader = request.headers['authorization'] || request.headers['Authorization'];
                     if (authHeader) {
                         // if header is present, build auth inputs
                         requestor = util_1.parseAuthHeader(authHeader);
@@ -170,10 +174,13 @@ class RouteController {
                             : config.response.view(result, config.response.options);
                         if (!view)
                             throw new nova_base_1.Exception('Resource not found', 404 /* NotFound */);
-                        response.json(view);
+                        response.statusCode = 200 /* OK */;
+                        response.setHeader('Content-Type', 'application/json; charset=utf-8');
+                        response.end(JSON.stringify(view), 'utf8');
                     }
                     else {
-                        response.sendStatus(204 /* NoContent */);
+                        response.statusCode = 204 /* NoContent */;
+                        response.end();
                     }
                 }
                 catch (error) {
