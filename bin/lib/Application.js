@@ -122,12 +122,12 @@ class Application extends events_1.EventEmitter {
                     });
                 })
                     .catch((error) => {
-                    setImmediate(this.emit(ERROR_EVENT, error));
+                    this.emit(ERROR_EVENT, error);
                     next(error);
                 });
             }
             catch (error) {
-                setImmediate(this.emit(ERROR_EVENT, error));
+                this.emit(ERROR_EVENT, error);
                 next(error);
             }
         });
