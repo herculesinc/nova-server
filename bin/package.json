@@ -13,7 +13,7 @@
     "socket"
   ],
   "main": "index.js",
-  "types": "nova-server.d.ts",
+  "typings": "nova-server.d.ts",
   "license": "MIT",
   "author": {
     "name": "Credo360, Inc.",
