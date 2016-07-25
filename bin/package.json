@@ -1,6 +1,6 @@
 {
   "name": "nova-server",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Action-based Web API framework written in TypeScript",
   "keywords": [
     "nova",
@@ -37,8 +37,7 @@
     "router": "1.1.x",
     "socket.io": "1.4.x",
     "toobusy-js": "0.5.x",
-    "type-is": "1.6.x",
-    "unpipe": "1.0.0"
+    "type-is": "1.6.x"
   },
   "devDependencies": {
     "del": "2.2.x",
