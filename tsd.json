@@ -34,6 +34,24 @@
     },
     "on-finished/on-finished.d.ts": {
       "commit": "7d6547a8a0c3f35ce5de82ba58bfd143c0d20fab"
+    },
+    "mocha/mocha.d.ts": {
+      "commit": "c6c068935a58aa58087a309740bcf933600140b8"
+    },
+    "supertest/supertest.d.ts": {
+      "commit": "c6c068935a58aa58087a309740bcf933600140b8"
+    },
+    "sinon/sinon.d.ts": {
+      "commit": "c6c068935a58aa58087a309740bcf933600140b8"
+    },
+    "superagent/superagent.d.ts": {
+      "commit": "c6c068935a58aa58087a309740bcf933600140b8"
+    },
+    "chai/chai.d.ts": {
+      "commit": "c6c068935a58aa58087a309740bcf933600140b8"
+    },
+    "assertion-error/assertion-error.d.ts": {
+      "commit": "c6c068935a58aa58087a309740bcf933600140b8"
     }
   }
 }
