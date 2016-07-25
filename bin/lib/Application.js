@@ -2,11 +2,11 @@
 // IMPORTS
 // =================================================================================================
 const http = require('http');
-const events_1 = require('events');
+const events = require('events');
 const Router = require('router');
 const socketio = require('socket.io');
 const toobusy = require('toobusy-js');
-const nova_base_1 = require('nova-base');
+const nova = require('nova-base');
 const RouteController_1 = require('./RouteController');
 const SocketListener_1 = require('./SocketListener');
 const SocketNotifier_1 = require('./SocketNotifier');
@@ -22,7 +22,7 @@ const DEFAULT_WEB_SERVER_CONFIG = {
 };
 // CLASS DEFINITION
 // =================================================================================================
-class Application extends events_1.EventEmitter {
+class Application extends events.EventEmitter {
     // CONSTRUCTOR
     // --------------------------------------------------------------------------------------------
     constructor(options) {
@@ -41,7 +41,7 @@ class Application extends events_1.EventEmitter {
         this.routeControllers = new Map();
         this.socketListeners = new Map();
         // initialize auth executor
-        this.authExecutor = new nova_base_1.Executor(this.context, authenticateSocket, socketAuthAdapter);
+        this.authExecutor = new nova.Executor(this.context, authenticateSocket, socketAuthAdapter);
         // set up lag handling
         toobusy.onLag((lag) => {
             this.emit(LAG_EVENT, lag);
@@ -92,7 +92,7 @@ class Application extends events_1.EventEmitter {
             try {
                 // reject new connections if the server is too busy
                 if (toobusy())
-                    throw new nova_base_1.TooBusyError();
+                    throw new nova.TooBusyError();
                 // get and parse auth data from handshake
                 const query = socket.handshake.query;
                 const authInputs = util_1.parseAuthHeader(query['authorization'] || query['Authorization']);

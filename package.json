@@ -34,6 +34,7 @@
     "on-finished": "2.3.x",
     "on-headers": "1.0.x",
     "proxy-addr": "1.1.x",
+    "router": "1.1.x",
     "socket.io": "1.4.x",
     "toobusy-js": "0.5.x",
     "type-is": "1.6.x",

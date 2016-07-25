@@ -2,14 +2,11 @@
 // =================================================================================================
 import * as http from 'http';
 import * as https from 'https';
-import { EventEmitter } from 'events';
+import * as events from 'events';
 import * as Router from 'router';
 import * as socketio from 'socket.io';
 import * as toobusy from 'toobusy-js';
-import {
-    Database, Cache, Dispatcher, Authenticator, RateLimiter, Logger, Exception, HttpStatusCode,
-    Executor, ExecutorContext, ActionContext, TooBusyError, RateOptions
-} from 'nova-base';
+import * as nova from 'nova-base';
 
 import { RouteController } from './RouteController';
 import { SocketListener, symSocketAuthInputs } from './SocketListener';
@@ -34,13 +31,13 @@ export interface AppConfig {
     version         : string;
     webServer?      : WebServerConfig;
     ioServer?       : socketio.ServerOptions;
-    authenticator?  : Authenticator;
-    database        : Database;
-    cache?          : Cache;
-    dispatcher?     : Dispatcher;
-    limiter?        : RateLimiter;
-    rateLimits?     : RateOptions;
-    logger?         : Logger;
+    authenticator?  : nova.Authenticator;
+    database        : nova.Database;
+    cache?          : nova.Cache;
+    dispatcher?     : nova.Dispatcher;
+    limiter?        : nova.RateLimiter;
+    rateLimits?     : nova.RateOptions;
+    logger?         : nova.Logger;
     settings?       : any;
 }
 
@@ -51,11 +48,11 @@ export interface WebServerConfig {
 
 // CLASS DEFINITION
 // =================================================================================================
-export class Application extends EventEmitter {
+export class Application extends events.EventEmitter {
     
     name            : string;
     version         : string;
-    context         : ExecutorContext;
+    context         : nova.ExecutorContext;
 
     webServer       : http.Server | https.Server;
     ioServer        : socketio.Server;
@@ -64,7 +61,7 @@ export class Application extends EventEmitter {
     socketListeners : Map<string, SocketListener>;
 
     router          : Router.Router;
-    authExecutor    : Executor<string, string>;
+    authExecutor    : nova.Executor<string, string>;
 
     // CONSTRUCTOR
     // --------------------------------------------------------------------------------------------
@@ -90,7 +87,7 @@ export class Application extends EventEmitter {
         this.socketListeners = new Map();
         
         // initialize auth executor
-        this.authExecutor = new Executor(this.context, authenticateSocket, socketAuthAdapter);
+        this.authExecutor = new nova.Executor(this.context, authenticateSocket, socketAuthAdapter);
 
         // set up lag handling
         toobusy.onLag((lag) => {
@@ -149,7 +146,7 @@ export class Application extends EventEmitter {
         this.ioServer.use((socket: socketio.Socket, next: Function) => {
             try {
                 // reject new connections if the server is too busy
-                if (toobusy()) throw new TooBusyError();
+                if (toobusy()) throw new nova.TooBusyError();
 
                 // get and parse auth data from handshake
                 const query = socket.handshake.query;
@@ -209,15 +206,15 @@ function validateOptions(options: AppConfig): AppConfig {
 // SOCKET AUTHENTICATOR ACTION
 // =================================================================================================
 interface SocketAuthInputs {
-    authenticator: Authenticator
+    authenticator: nova.Authenticator
 }
 
-function socketAuthAdapter(this: ActionContext, inputs: SocketAuthInputs, authInfo: any): Promise<string> {
+function socketAuthAdapter(this: nova.ActionContext, inputs: SocketAuthInputs, authInfo: any): Promise<string> {
     // convert auth info to the owner string
     return Promise.resolve(inputs.authenticator.toOwner(authInfo));
 }
 
-function authenticateSocket(this: ActionContext, inputs: string): Promise<string> {
+function authenticateSocket(this: nova.ActionContext, inputs: string): Promise<string> {
     // just a pass-through action
     return Promise.resolve(inputs);
 }

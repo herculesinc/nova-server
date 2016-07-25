@@ -17,8 +17,8 @@ import { MockRateLimiter } from './mocks/RateLimiter';
 
 // PERPARATIONS
 // =================================================================================================
-const router = new RouteController();
-router.set('/', {
+const controller = new RouteController();
+controller.set('/', {
     get: {
         adapter     : adapters.helloWorldAdapter,
         action      : actions.helloWorldAction,
@@ -51,7 +51,7 @@ const app = createApp({
 });
 
 // attach routers
-app.register('/', router);
+app.register('/', controller);
 app.register('/', listener);
 
 // start the server

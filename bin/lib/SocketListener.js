@@ -1,6 +1,6 @@
 "use strict";
 const toobusy = require('toobusy-js');
-const nova_base_1 = require('nova-base');
+const nova = require('nova-base');
 // MODULE VARIABLES
 // =================================================================================================
 exports.symSocketAuthInputs = Symbol();
@@ -53,12 +53,12 @@ class SocketListener {
             authOptions: config.auth
         };
         // build executor
-        const executor = new nova_base_1.Executor(this.context, config.action, config.adapter, options);
+        const executor = new nova.Executor(this.context, config.action, config.adapter, options);
         // build and return the handler
         return function (data, callback) {
             // check if the server is too busy
             if (toobusy()) {
-                const error = new nova_base_1.TooBusyError();
+                const error = new nova.TooBusyError();
                 setImmediate(onerror, error);
                 return callback(error);
             }

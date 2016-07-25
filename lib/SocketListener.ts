@@ -2,10 +2,7 @@
 // =================================================================================================
 import * as SocketIO from 'socket.io';
 import * as toobusy from 'toobusy-js'
-import { 
-    Action, ActionAdapter, Executor, ExecutorContext, ExecutionOptions, AuthInputs, RateOptions,
-    DaoOptions, TooBusyError
-} from 'nova-base';
+import * as nova from 'nova-base';
 
 // MODULE VARIABLES
 // =================================================================================================
@@ -16,10 +13,10 @@ const CONNECT_EVENT = 'connection';
 // =================================================================================================
 export interface HandlerConfig<V,T> {
     defaults?       : any;
-    adapter?        : ActionAdapter<V>;
-    action          : Action<V,T>;
-    rate?           : RateOptions;
-    dao?            : DaoOptions;
+    adapter?        : nova.ActionAdapter<V>;
+    action          : nova.Action<V,T>;
+    rate?           : nova.RateOptions;
+    dao?            : nova.DaoOptions;
     auth?           : any;
 }
 
@@ -33,10 +30,10 @@ export class SocketListener {
 
     name?       : string;
     topic       : string;
-    context     : ExecutorContext;
+    context     : nova.ExecutorContext;
     handlers    : Map<string, HandlerConfig<any,any>>;
 
-    rateLimits  : RateOptions;
+    rateLimits  : nova.RateOptions;
 
     // CONSTRUCTOR
     // --------------------------------------------------------------------------------------------
@@ -55,7 +52,7 @@ export class SocketListener {
         this.handlers.set(event, config);
     }
 
-    attach(topic: string, io: SocketIO.Server, context: ExecutorContext, onerror: (error: Error) => void) {
+    attach(topic: string, io: SocketIO.Server, context: nova.ExecutorContext, onerror: (error: Error) => void) {
         // check if the listener has already been attached
         if (this.topic) throw new Error(`Listener has alread been bound to ${this.topic} topic`);
 
@@ -80,28 +77,28 @@ export class SocketListener {
         if (!config || !socket) return;
 
         // build execution options
-        const options: ExecutionOptions = {
+        const options: nova.ExecutionOptions = {
             daoOptions  : config.dao,
             rateLimits  : config.rate,
             authOptions : config.auth
         };
 
         // build executor
-        const executor = new Executor(this.context, config.action, config.adapter, options);
+        const executor = new nova.Executor(this.context, config.action, config.adapter, options);
 
         // build and return the handler
         return function(data: any, callback: (response) => void) {
 
             // check if the server is too busy
             if (toobusy()) {
-                const error = new TooBusyError();
+                const error = new nova.TooBusyError();
                 setImmediate(onerror, error);
                 return callback(error);
             }
             
             // build inputs and run the executor
             const inputs = Object.assign({}, config.defaults, data); 
-            const authInputs: AuthInputs = socket[symSocketAuthInputs];
+            const authInputs: nova.AuthInputs = socket[symSocketAuthInputs];
             executor.execute(inputs, authInputs)
                 .then((result) => callback(undefined))
                 .catch((error) => {
