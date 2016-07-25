@@ -1,6 +1,5 @@
 "use strict";
 const onFinished = require('on-finished');
-const unpipe = require('unpipe');
 const nova_base_1 = require('nova-base');
 // FINAL HANDLER
 // =================================================================================================
@@ -61,7 +60,7 @@ function send(request, response, status, headers, body) {
     }
     else {
         // unpipe everything from the request
-        unpipe(request);
+        request.unpipe();
         // flush the request
         onFinished(request, write);
         request.resume();

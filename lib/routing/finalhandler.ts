@@ -2,7 +2,6 @@
 // =================================================================================================
 import { IncomingMessage, ServerResponse, STATUS_CODES } from 'http';
 import * as onFinished from 'on-finished';
-import * as unpipe from 'unpipe';
 import { Exception, InvalidEndpointError, HttpStatusCode } from 'nova-base';
 
 // FINAL HANDLER
@@ -75,7 +74,7 @@ function send(request: IncomingMessage, response: ServerResponse, status: number
     }
     else {
         // unpipe everything from the request
-        unpipe(request);
+        request.unpipe();
 
         // flush the request
         onFinished(request, write);

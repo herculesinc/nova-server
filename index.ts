@@ -31,8 +31,12 @@ export function createApp(options: AppConfig): Application {
 
 export function configure(setting: 'load controller', config: LoadControllerConfig);
 export function configure(setting: string, config: any) {
+    if (!config) throw new TypeError('Config object must be provided');
 
     if (setting === 'load controller') {
+        if (config.maxLag <= 0) throw new TypeError('Max lag must be > 0');
+        if (config.interval <= 0) throw new TypeError('Interval must be > 0');
+
         toobusy.maxLag(config.maxLag);
         toobusy.interval(config.interval);
     }
@@ -42,3 +46,4 @@ export function configure(setting: string, config: any) {
 // =================================================================================================
 export { RouteController } from './lib/RouteController';
 export { SocketListener } from './lib/SocketListener';
+export { validate, Exception, util } from 'nova-base';
