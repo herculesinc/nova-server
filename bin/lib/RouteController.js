@@ -39,7 +39,7 @@ const ACCPET_TYPE_CHECKER = {
 };
 // CLASS DEFINITION
 // =================================================================================================
-class Router {
+class RouteController {
     // CONSTRUCTOR
     // --------------------------------------------------------------------------------------------
     constructor(name) {
@@ -57,21 +57,21 @@ class Router {
             throw new Error(`Path {${path}} has already been bound to a handler`);
         this.routes.set(path, config);
     }
-    attach(root, server, context) {
-        // check if the router has already been attached
+    attach(root, router, context) {
+        // check if the controller has already been attached
         if (this.root)
-            throw new Error(`Router has alread been bound to ${this.root} root`);
-        // initialize router variables
+            throw new Error(`Controller has alread been bound to ${this.root} root`);
+        // initialize controller variables
         this.root = root;
         this.context = context;
         // get the logger from context
         const logger = context.logger;
-        // attach route handlers to the server
+        // attach route handlers to the router
         for (let [subpath, config] of this.routes) {
             const methods = ['OPTIONS'];
             const fullpath = this.root + subpath;
             const corsOptions = Object.assign({}, index_1.defaults.CORS, config.cors);
-            server.all(this.root, function (request, response, next) {
+            router.all(this.root, function (request, response, next) {
                 // add CORS response headers for all requests
                 response.header('Access-Control-Allow-Methods', allowedMethods);
                 response.header('Access-Control-Allow-Origin', corsOptions.origin);
@@ -90,32 +90,31 @@ class Router {
                 }
             });
             if (config.get) {
-                server.get(fullpath, ...this.buildEndpointHandlers(config.get, true));
+                router.get(fullpath, ...this.buildEndpointHandlers(config.get, true));
                 methods.push('GET');
             }
             if (config.post) {
-                server.post(fullpath, ...this.buildEndpointHandlers(config.post));
+                router.post(fullpath, ...this.buildEndpointHandlers(config.post));
                 methods.push('POST');
             }
             if (config.put) {
-                server.put(fullpath, ...this.buildEndpointHandlers(config.put));
+                router.put(fullpath, ...this.buildEndpointHandlers(config.put));
                 methods.push('PUT');
             }
             if (config.patch) {
-                server.patch(fullpath, ...this.buildEndpointHandlers(config.patch));
+                router.patch(fullpath, ...this.buildEndpointHandlers(config.patch));
                 methods.push('PATCH');
             }
             if (config.delete) {
-                server.delete(fullpath, ...this.buildEndpointHandlers(config.delete));
+                router.delete(fullpath, ...this.buildEndpointHandlers(config.delete));
                 methods.push('DELETE');
             }
             // these variables are used in the server.all() handler above
             var allowedMethods = methods.join(',');
             var allowedHeaders = corsOptions.headers.join(',');
             // catch unsupported method requests
-            server.all(this.root, function (request, response, next) {
-                const message = `Method ${request.method} is not allowed for ${request.baseUrl}`;
-                next(new nova_base_1.Exception(message, 405 /* NotAllowed */));
+            router.all(this.root, function (request, response, next) {
+                next(new nova_base_1.UnsupportedMethodError(request.method, request.path));
             });
         }
     }
@@ -187,7 +186,7 @@ class Router {
     }
     ;
 }
-exports.Router = Router;
+exports.RouteController = RouteController;
 // HELPER FUNCTIONS
 // =================================================================================================
 function getTypeCheckers(config, expectsResponse) {
@@ -253,4 +252,4 @@ function buildExecutorMap(config, context, options) {
     }
     return executorMap;
 }
-//# sourceMappingURL=Router.js.map
+//# sourceMappingURL=RouteController.js.map

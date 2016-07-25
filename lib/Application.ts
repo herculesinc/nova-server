@@ -12,10 +12,11 @@ import {
     Executor, ExecutorContext, ActionContext, TooBusyError, RateOptions
 } from 'nova-base';
 
-import { Router } from './Router';
+import { RouteController } from './RouteController';
 import { SocketListener, symSocketAuthInputs } from './SocketListener';
 import { SocketNotifier } from './SocketNotifier';
 import { parseAuthHeader } from './util';
+import { finalhandler } from './routing/finalhandler';
 
 // MODULE VARIABLES
 // =================================================================================================
@@ -28,17 +29,21 @@ const headers = {
     RSPONSE_TIME: 'X-Response-Time'
 };
 
+const DEFAULT_WEB_SERVER_CONFIG: WebServerConfig = {
+    trustProxy  : true
+};
+
 // INTERFACES
 // =================================================================================================
 export interface AppConfig {
     name            : string;
     version         : string;
-    webServer       : WebServerConfig;
+    webServer?      : WebServerConfig;
     ioServer?       : socketio.ServerOptions;
-    authenticator   : Authenticator;
+    authenticator?  : Authenticator;
     database        : Database;
-    cache           : Cache;
-    dispatcher      : Dispatcher;
+    cache?          : Cache;
+    dispatcher?     : Dispatcher;
     limiter?        : RateLimiter;
     rateLimits?     : RateOptions;
     logger?         : Logger;
@@ -46,7 +51,7 @@ export interface AppConfig {
 }
 
 export interface WebServerConfig {
-    server          : http.Server | https.Server;
+    server?         : http.Server | https.Server;
     trustProxy?     : boolean | string | number;
 }
 
@@ -61,10 +66,10 @@ export class Application extends EventEmitter {
     webServer       : http.Server | https.Server;
     ioServer        : socketio.Server;
 
-    endpointRouters : Map<string, Router>;
+    routeControllers: Map<string, RouteController>;
     socketListeners : Map<string, SocketListener>;
 
-    eServer         : express.Application;
+    router          : express.Application;
     authExecutor    : Executor<string, string>;
 
     // CONSTRUCTOR
@@ -87,7 +92,7 @@ export class Application extends EventEmitter {
         this.setExecutorContext(options);
 
         // create router and listener maps
-        this.endpointRouters = new Map();
+        this.routeControllers = new Map();
         this.socketListeners = new Map();
         
         // initialize auth executor
@@ -101,16 +106,16 @@ export class Application extends EventEmitter {
     
     // PUBLIC METHODS
     // --------------------------------------------------------------------------------------------
-    register(root: string, router: Router);
+    register(root: string, router: RouteController);
     register(topic: string, listener: SocketListener)
-    register(path: string, routerOrListener: Router | SocketListener) {
+    register(path: string, routerOrListener: RouteController | SocketListener) {
         if (!path) throw new Error('Cannot register router or listener: path is undefined');
         if (!routerOrListener) throw new Error('Cannot register router or listener: router or listener is undefined');
 
-        if (routerOrListener instanceof Router) {
-            if (this.endpointRouters.has(path)) throw Error(`Path {${path}} has already been attached to a router`);
-            routerOrListener.attach(path, this.eServer, this.context);
-            this.endpointRouters.set(path, routerOrListener);
+        if (routerOrListener instanceof RouteController) {
+            if (this.routeControllers.has(path)) throw Error(`Path {${path}} has already been attached to a router`);
+            routerOrListener.attach(path, this.router, this.context);
+            this.routeControllers.set(path, routerOrListener);
         }
         else if (routerOrListener instanceof SocketListener) {
             if (this.socketListeners.has(path)) throw Error(`Topic {${path}} has been already attached to a listener`);
@@ -121,45 +126,25 @@ export class Application extends EventEmitter {
         }    
     }
 
-    start() {
-        // chatch all unresolved requests
-        this.eServer.use(function (request: express.Request, response: express.Response, next: Function) {
-            next(new Exception(`Endpoint ${request.path} does not exist`, HttpStatusCode.NotFound));
-        });
-
-        // attach error handler
-        this.eServer.use((error: any, request: express.Request, response: express.Response, next: Function) => {
-            
-            // fire error event
-            this.emit(ERROR_EVENT, error);
-
-            // end response
-            response.status(error.status || HttpStatusCode.InternalServerError);
-            response.json( (error instanceof Exception) 
-                ? error 
-                : { name: error.name, message: error.message }
-            );
-        });
-    }
-
     // PRIVATE METHODS
     // --------------------------------------------------------------------------------------------
     private setWebServer(options: WebServerConfig) {
+        options = Object.assign({}, DEFAULT_WEB_SERVER_CONFIG, options);
 
         // create express app
-        this.webServer = options.server;
-        this.eServer = express();
+        this.webServer = options.server || http.createServer();
+        this.router = express();
 
         // configure express app
-        this.eServer.set('trust proxy', options.trustProxy); 
-        this.eServer.set('x-powered-by', false);
-        this.eServer.set('etag', false);
+        this.router.set('trust proxy', options.trustProxy); 
+        this.router.set('x-powered-by', false);
+        this.router.set('etag', false);
 
         // calculate response time
-        this.eServer.use(responseTime({ digits: 0, suffix: false, header: headers.RSPONSE_TIME }));
+        this.router.use(responseTime({ digits: 0, suffix: false, header: headers.RSPONSE_TIME }));
 
         // set version header
-        this.eServer.use((request: express.Request, response: express.Response, next: Function) => {
+        this.router.use((request: express.Request, response: express.Response, next: Function) => {
             response.set({
                 [headers.SERVER_NAME]: this.name,
                 [headers.API_VERSION]: this.version
@@ -168,7 +153,12 @@ export class Application extends EventEmitter {
         });
 
         // bind express app to the server
-        this.webServer.on('request', this.eServer);
+        this.webServer.on('request', (request, response) => {
+            // use custom final handler with express
+            this.router(request, response, finalhandler(request, response, (error) => {
+                this.emit(ERROR_EVENT, error);
+            }));
+        });
     }
 
     private setIoServer(options?: socketio.ServerOptions) {
@@ -227,7 +217,12 @@ export class Application extends EventEmitter {
 // HELPER FUNCTIONS
 // =================================================================================================
 function validateOptions(options: AppConfig): AppConfig {
-    // TODO: validate options
+    if (!options) throw new TypeError('Cannot create an app: options are undefined');
+    options = Object.assign({}, options);
+
+    if (!options.name) throw new TypeError('Cannot create an app: name is undefined');
+    if (!options.version) throw new TypeError('Cannot create an app: version is undefined');
+
     return options;
 }
 

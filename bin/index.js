@@ -30,8 +30,8 @@ function configure(setting, config) {
 exports.configure = configure;
 // RE-EXPORTS
 // =================================================================================================
-var Router_1 = require('./lib/Router');
-exports.Router = Router_1.Router;
+var RouteController_1 = require('./lib/RouteController');
+exports.RouteController = RouteController_1.RouteController;
 var SocketListener_1 = require('./lib/SocketListener');
 exports.SocketListener = SocketListener_1.SocketListener;
 //# sourceMappingURL=index.js.map

@@ -25,7 +25,7 @@ class SocketListener {
             throw new Error(`Event {${event}} has already been bound to a handler`);
         this.handlers.set(event, config);
     }
-    attach(topic, io, context, errorHandler) {
+    attach(topic, io, context, onerror) {
         // check if the listener has already been attached
         if (this.topic)
             throw new Error(`Listener has alread been bound to ${this.topic} topic`);
@@ -37,13 +37,13 @@ class SocketListener {
         io.of(topic).on(CONNECT_EVENT, (socket) => {
             // attach event handlers handlers
             for (let [event, config] of this.handlers) {
-                socket.on(event, this.buildEventHandler(config, socket, errorHandler));
+                socket.on(event, this.buildEventHandler(config, socket, onerror));
             }
         });
     }
     // PRIVATE METHODS
     // --------------------------------------------------------------------------------------------
-    buildEventHandler(config, socket, errorHandler) {
+    buildEventHandler(config, socket, onerror) {
         if (!config || !socket)
             return;
         // build execution options
@@ -59,7 +59,7 @@ class SocketListener {
             // check if the server is too busy
             if (toobusy()) {
                 const error = new nova_base_1.TooBusyError();
-                errorHandler(error);
+                setImmediate(onerror, error);
                 return callback(error);
             }
             // build inputs and run the executor
@@ -68,7 +68,7 @@ class SocketListener {
             executor.execute(inputs, authInputs)
                 .then((result) => callback(undefined))
                 .catch((error) => {
-                errorHandler(error);
+                setImmediate(onerror, error);
                 callback(error);
             });
         };

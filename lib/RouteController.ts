@@ -2,7 +2,7 @@
 // =================================================================================================
 import { 
     Action, ActionAdapter, Executor, ExecutorContext, ExecutionOptions, AuthInputs, RateOptions,
-    DaoOptions, HttpStatusCode, Exception, validate, TooBusyError
+    DaoOptions, HttpStatusCode, Exception, validate, TooBusyError, UnsupportedMethodError
 } from 'nova-base';
 import { Application as ExpressApp, RequestHandler, Request, Response } from 'express';
 import * as bodyParser from 'body-parser';
@@ -42,7 +42,6 @@ const ACCPET_TYPE_CHECKER = {
 type EndpointConfigOrHandler = EndpointConfig<any,any> | RequestHandler;
 
 export interface RouteConfig {
-    name?   : string;
     get?    : EndpointConfigOrHandler;
     post?   : EndpointConfigOrHandler;
     put?    : EndpointConfigOrHandler;
@@ -100,7 +99,7 @@ interface CorsOptions {
 
 // CLASS DEFINITION
 // =================================================================================================
-export class Router {
+export class RouteController {
     
     name    : string;
     root    : string;
@@ -124,24 +123,24 @@ export class Router {
         this.routes.set(path, config);
     }
 
-    attach(root: string, server: ExpressApp, context: ExecutorContext) {
-        // check if the router has already been attached
-        if (this.root) throw new Error(`Router has alread been bound to ${this.root} root`);
+    attach(root: string, router: ExpressApp, context: ExecutorContext) {
+        // check if the controller has already been attached
+        if (this.root) throw new Error(`Controller has alread been bound to ${this.root} root`);
 
-        // initialize router variables
+        // initialize controller variables
         this.root = root;
         this.context = context;
 
         // get the logger from context
         const logger = context.logger;
 
-        // attach route handlers to the server
+        // attach route handlers to the router
         for (let [subpath, config] of this.routes) {
             const methods = ['OPTIONS'];
             const fullpath = this.root + subpath;
             const corsOptions: CorsOptions = Object.assign({}, defaults.CORS, config.cors);
 
-            server.all(this.root, function(request: Request, response: Response, next: Function) {
+            router.all(this.root, function(request: Request, response: Response, next: Function) {
                 // add CORS response headers for all requests
                 response.header('Access-Control-Allow-Methods', allowedMethods);
                 response.header('Access-Control-Allow-Origin', corsOptions.origin);
@@ -163,27 +162,27 @@ export class Router {
             });
 
             if (config.get) {
-                server.get(fullpath, ...this.buildEndpointHandlers(config.get, true));
+                router.get(fullpath, ...this.buildEndpointHandlers(config.get, true));
                 methods.push('GET');
             }
 
             if (config.post) {
-                server.post(fullpath, ...this.buildEndpointHandlers(config.post));
+                router.post(fullpath, ...this.buildEndpointHandlers(config.post));
                 methods.push('POST');
             }
 
             if (config.put) {
-                server.put(fullpath, ...this.buildEndpointHandlers(config.put));
+                router.put(fullpath, ...this.buildEndpointHandlers(config.put));
                 methods.push('PUT');
             }
 
             if (config.patch) {
-                server.patch(fullpath, ...this.buildEndpointHandlers(config.patch));
+                router.patch(fullpath, ...this.buildEndpointHandlers(config.patch));
                 methods.push('PATCH');
             }
 
             if (config.delete) {
-                server.delete(fullpath, ...this.buildEndpointHandlers(config.delete));
+                router.delete(fullpath, ...this.buildEndpointHandlers(config.delete));
                 methods.push('DELETE');
             }
 
@@ -192,9 +191,8 @@ export class Router {
             var allowedHeaders = corsOptions.headers.join(',');
 
             // catch unsupported method requests
-            server.all(this.root, function(request: Request, response: Response, next: Function) {
-                const message = `Method ${request.method} is not allowed for ${request.baseUrl}`;
-                next(new Exception(message, HttpStatusCode.NotAllowed));
+            router.all(this.root, function(request: Request, response: Response, next: Function) {
+                next(new UnsupportedMethodError(request.method, request.path));
             });
         }
     }
