@@ -317,7 +317,7 @@ describe('NOVA-SERVER -> RouteController;', () => {
         });
 
         it('should create DELETE \'/:userId\' with root \'/users\'', done => {
-            router.set('/:userId', { delete: endpointConfig });
+            router.set('/:userId', { 'delete': endpointConfig });
             app.register('/users', router);
             app.on('error', () => undefined);
 
@@ -946,7 +946,7 @@ describe('NOVA-SERVER -> RouteController;', () => {
                     name         : 'Test API Server',
                     version      : '0.0.1',
                     database     : database,
-                    authenticator: function (inputs) {
+                    authenticator: function () {
                         try {
                             validate.authorized(false, 'Invalid token');
                         } catch (e) {
