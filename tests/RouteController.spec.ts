@@ -37,6 +37,8 @@ const defaultBody: any = {
     bodyParam1: 1,
     bodyParam2: true
 };
+const authOptions: any = { isRequired: false };
+const routeDaoOptions: DaoOptions = { startTransaction: true };
 const authToken: string = 'testAuthToken';
 
 describe('NOVA-SERVER -> RouteController;', () => {
@@ -108,8 +110,7 @@ describe('NOVA-SERVER -> RouteController;', () => {
 
             app = createApp(appConfig);
             fakeRequest = request(app.webServer)
-                .get('/')
-                .set('Content-Type', 'application/json');
+                .get('/');
 
             app.on('error', () => undefined);
         });
@@ -196,8 +197,7 @@ describe('NOVA-SERVER -> RouteController;', () => {
                 app.register('/', router);
                 app.on('error', () => undefined);
                 fakeRequest = request(app.webServer)
-                    .get('/')
-                    .set('Content-Type', 'application/json');
+                    .get('/');
             });
 
             it('should return status 200', done => {
@@ -221,12 +221,118 @@ describe('NOVA-SERVER -> RouteController;', () => {
         });
     });
 
+    describe('should create different api endpoints;', () => {
+        beforeEach(() => {
+            appConfig = {
+                name    : 'Test API Server',
+                version : '0.0.1',
+                database: database
+            };
+
+            app = createApp(appConfig);
+            router = new RouteController();
+            endpointConfig = {
+                action: sinon.stub().returns(Promise.resolve({ results: 'action results' }))
+            };
+        });
+
+        it('should create GET \'/\' with root \'/\'', done => {
+            router.set('/', { get: endpointConfig });
+            app.register('/', router);
+            app.on('error', () => undefined);
+
+            request(app.webServer)
+                .get('/')
+                .expect(204, done);
+        });
+
+        it('should create GET \'/\' with root \'/users\'', done => {
+            router.set('/', { get: endpointConfig });
+            app.register('/users', router);
+            app.on('error', () => undefined);
+
+            request(app.webServer)
+                .get('/users')
+                .expect(204, done);
+        });
+
+        it('should create POST \'/:id\' with root \'/\'', done => {
+            router.set('/:id', { post: endpointConfig });
+            app.register('/', router);
+            app.on('error', () => undefined);
+
+            request(app.webServer)
+                .post('/12345')
+                .expect(204, done);
+        });
+
+        it('should create POST \':id\' with root \'/\'', done => {
+            router.set(':id', { post: endpointConfig });
+            app.register('/', router);
+            app.on('error', () => undefined);
+
+            request(app.webServer)
+                .post('/12345')
+                .expect(204, done);
+        });
+
+        it('should create PUT \'/:id\' with root \'/user\'', done => {
+            router.set('/:id', { put: endpointConfig });
+            app.register('/user', router);
+            app.on('error', () => undefined);
+
+            request(app.webServer)
+                .put('/user/12345')
+                .expect(204, done);
+        });
+
+        it('should create PUT \':id\' with root \'/user\'', done => {
+            router.set(':id', { put: endpointConfig });
+            app.register('/user', router);
+            app.on('error', () => undefined);
+
+            request(app.webServer)
+                .put('/user/12345')
+                .expect(204, done);
+        });
+
+        it('should create PATCH \'/:section/:id\' with root \'/post\'', done => {
+            router.set('/:section/:id', { patch: endpointConfig });
+            app.register('/post', router);
+            app.on('error', () => undefined);
+
+            request(app.webServer)
+                .patch('/post/all/qwerty')
+                .expect(204, done);
+        });
+
+        it('should create PATCH \':section/:id\' with root \'/post\'', done => {
+            router.set(':section/:id', { patch: endpointConfig });
+            app.register('/post', router);
+            app.on('error', () => undefined);
+
+            request(app.webServer)
+                .patch('/post/all/qwerty')
+                .expect(204, done);
+        });
+
+        it('should create DELETE \'/:userId\' with root \'/users\'', done => {
+            router.set('/:userId', { delete: endpointConfig });
+            app.register('/users', router);
+            app.on('error', () => undefined);
+
+            request(app.webServer)
+                .del('/users/31')
+                .expect(204, done);
+        });
+    });
+
     describe('should run app and call all functions with right arguments;', () => {
         beforeEach(() => {
             appConfig = {
                 name         : 'Test API Server',
                 version      : '0.0.1',
-                database     : database,
+                database     : { connect: sinon.stub().returns(Promise.resolve(dao)) },
                 authenticator: authenticator
             };
             endpointConfig = {
@@ -250,7 +356,6 @@ describe('NOVA-SERVER -> RouteController;', () => {
             beforeEach(done => {
                 request(app.webServer)
                     .get('/')
-                    .set('Content-Type', 'application/json')
                     .expect(200)
                     .end((err, res) => {
                         if (err) {
@@ -296,7 +401,6 @@ describe('NOVA-SERVER -> RouteController;', () => {
                 request(app.webServer)
                     .get('/')
                     .set('Authorization', `token ${authToken}`)
-                    .set('Content-Type', 'application/json')
                     .expect(200)
                     .end((err, res) => {
                         if (err) {
@@ -348,7 +452,6 @@ describe('NOVA-SERVER -> RouteController;', () => {
             beforeEach(done => {
                 request(app.webServer)
                     .get('/')
-                    .set('Content-Type', 'application/json')
                     .query(defaultQuery)
                     .expect(200)
                     .end((err, res) => {
@@ -397,7 +500,6 @@ describe('NOVA-SERVER -> RouteController;', () => {
                 request(app.webServer)
                     .get('/')
                     .set('Authorization', `token ${authToken}`)
-                    .set('Content-Type', 'application/json')
                     .query(defaultQuery)
                     .expect(200)
                     .end((err, res) => {
@@ -554,6 +656,102 @@ describe('NOVA-SERVER -> RouteController;', () => {
                 expect((endpointConfig.response as any).firstCall.calledWithExactly(actionResult)).to.be.true;
             });
         });
+
+        describe('when auth options was provided in route config;', () => {
+            beforeEach(done => {
+                endpointConfig.auth = authOptions;
+                routeConfig = { get: endpointConfig };
+                app = createApp(appConfig);
+                router = new RouteController();
+                router.set('/', routeConfig);
+                app.register('/', router);
+                app.on('error', () => undefined);
+
+                request(app.webServer)
+                    .get('/')
+                    .set('Authorization', `token ${authToken}`)
+                    .expect(200)
+                    .end((err, res) => {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        expect(res.body).to.deep.equal(viewResult);
+                        done();
+                    });
+            });
+
+            it('authenticator should be called once', () => {
+                expect((authenticator as any).calledOnce).to.be.true;
+            });
+
+            it('authenticator should be called with right arguments', () => {
+                expect((authenticator as any).firstCall.calledWithExactly({
+                    scheme     : 'token',
+                    credentials: authToken
+                }, authOptions)).to.be.true;
+            });
+
+            it('adapter should be called with right arguments', () => {
+                expect((endpointConfig.adapter as any).firstCall.calledWithExactly(defaultsData, authResult)).to.be.true;
+            });
+        });
+
+        describe('when dao options was not provided in route config;', () => {
+            beforeEach(done => {
+                request(app.webServer)
+                    .get('/')
+                    .expect(200)
+                    .end((err, res) => {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        expect(res.body).to.deep.equal(viewResult);
+                        done();
+                    });
+            });
+
+            it('database.connect should be called once', () => {
+                expect((appConfig.database.connect as any).calledOnce).to.be.true;
+            });
+
+            it('database.connect should be called with right arguments', () => {
+                expect((appConfig.database.connect as any).firstCall.calledWithExactly({ startTransaction: false })).to.be.true;
+            });
+        });
+
+        describe('when dao options was provided in route config;', () => {
+            beforeEach(done => {
+                endpointConfig.dao = routeDaoOptions;
+                routeConfig = { get: endpointConfig };
+                app = createApp(appConfig);
+                router = new RouteController();
+                router.set('/', routeConfig);
+                app.register('/', router);
+                app.on('error', () => undefined);
+
+                request(app.webServer)
+                    .get('/')
+                    .expect(200)
+                    .end((err, res) => {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        expect(res.body).to.deep.equal(viewResult);
+                        done();
+                    });
+            });
+
+            it('database.connect should be called once', () => {
+                expect((appConfig.database.connect as any).calledOnce).to.be.true;
+            });
+
+            it('database.connect should be called with right arguments', () => {
+                expect((appConfig.database.connect as any).firstCall.calledWithExactly(routeDaoOptions)).to.be.true;
+            });
+        });
     });
 
     describe('should emmit and return error', () => {
@@ -582,8 +780,7 @@ describe('NOVA-SERVER -> RouteController;', () => {
                 app.on('error', () => undefined);
 
                 fakeRequest = request(app.webServer)
-                    .get('/user')
-                    .set('Content-Type', 'application/json');
+                    .get('/user');
             });
 
             it('should return 404', done => {
@@ -649,6 +846,7 @@ describe('NOVA-SERVER -> RouteController;', () => {
 
         describe('if request content type is not \'json\';', () => {
             beforeEach(() => {
+                routeConfig = { put: endpointConfig };
                 router = new RouteController();
                 router.set('/', routeConfig);
                 app = createApp(appConfig);
@@ -656,7 +854,7 @@ describe('NOVA-SERVER -> RouteController;', () => {
                 app.on('error', () => undefined);
 
                 fakeRequest = (request(app.webServer) as any)
-                    .get('/')
+                    .put('/')
                     .set('Content-Type', 'html');
             });
 
@@ -695,8 +893,7 @@ describe('NOVA-SERVER -> RouteController;', () => {
                 app.on('error', () => undefined);
 
                 fakeRequest = request(app.webServer)
-                    .get('/')
-                    .set('Content-Type', 'application/json');
+                    .get('/');
             });
 
             it('should return 415', done => {
@@ -716,8 +913,7 @@ describe('NOVA-SERVER -> RouteController;', () => {
                 app.on('error', () => undefined);
 
                 fakeRequest = request(app.webServer)
-                    .get('/')
-                    .set('Content-Type', 'application/json');
+                    .get('/');
             });
 
             it('should return 404', done => {
@@ -767,7 +963,6 @@ describe('NOVA-SERVER -> RouteController;', () => {
 
                 fakeRequest = request(app.webServer)
                     .get('/')
-                    .set('Content-Type', 'application/json')
                     .set('Authorization', `token ${authToken}`);
             });
 
@@ -812,7 +1007,6 @@ describe('NOVA-SERVER -> RouteController;', () => {
 
                 fakeRequest = request(app.webServer)
                     .get('/')
-                    .set('Content-Type', 'application/json')
                     .set('Authorization', `token ${authToken}`);
             });
 
