@@ -39,7 +39,7 @@ const defaultBody: any = {
 };
 const authToken: string = 'testAuthToken';
 
-describe('NOVA-SERVER -> tests;', () => {
+describe('NOVA-SERVER -> RouteController;', () => {
     beforeEach(() => {
         dao = new MockDao(daoOptions);
         database = { connect: sinon.stub().returns(Promise.resolve(dao)) };
@@ -592,8 +592,7 @@ describe('NOVA-SERVER -> tests;', () => {
             });
 
             it('should emmit error with \'does not exist\' message', done => {
-                fakeRequest.end(() => {
-                });
+                fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
                     expect(err.message).to.equal('Endpoint for /user does not exist');
@@ -602,8 +601,7 @@ describe('NOVA-SERVER -> tests;', () => {
             });
 
             it('should emmit error with 404 status', done => {
-                fakeRequest.end(() => {
-                });
+                fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
                     expect(err.status).to.equal(404);
@@ -631,8 +629,7 @@ describe('NOVA-SERVER -> tests;', () => {
             });
 
             it('should emmit error with \'is not supported\' message', done => {
-                fakeRequest.end(() => {
-                });
+                fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
                     expect(err.message).to.equal('Method POST is not supported for / endpoint');
@@ -641,8 +638,7 @@ describe('NOVA-SERVER -> tests;', () => {
             });
 
             it('should emmit error with 404 status', done => {
-                fakeRequest.end(() => {
-                });
+                fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
                     expect(err.status).to.equal(405);
@@ -670,8 +666,7 @@ describe('NOVA-SERVER -> tests;', () => {
             });
 
             it('should emmit error with \'Only JSON body is supported\' message', done => {
-                fakeRequest.end(() => {
-                });
+                fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
                     expect(err.message).to.equal('Only JSON body is supported for this request');
@@ -680,8 +675,7 @@ describe('NOVA-SERVER -> tests;', () => {
             });
 
             it('should emmit error with 415 status', done => {
-                fakeRequest.end(() => {
-                });
+                fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
                     expect(err.status).to.equal(415);
@@ -732,8 +726,7 @@ describe('NOVA-SERVER -> tests;', () => {
             });
 
             it('should emmit error with \'not found\' message', done => {
-                fakeRequest.end(() => {
-                });
+                fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
                     expect(err.message).to.equal('Resource not found');
@@ -742,8 +735,7 @@ describe('NOVA-SERVER -> tests;', () => {
             });
 
             it('should emmit error with 404 status', done => {
-                fakeRequest.end(() => {
-                });
+                fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
                     expect(err.status).to.equal(404);
@@ -761,8 +753,7 @@ describe('NOVA-SERVER -> tests;', () => {
                     authenticator: function (inputs) {
                         try {
                             validate.authorized(false, 'Invalid token');
-                        }
-                        catch (e) {
+                        } catch (e) {
                             return Promise.reject(e);
                         }
                     }
@@ -786,8 +777,7 @@ describe('NOVA-SERVER -> tests;', () => {
             });
 
             it('should emmit error with \'Invalid token\' message', done => {
-                fakeRequest.end(() => {
-                });
+                fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
                     expect(err.message).to.match(/Invalid token/);
@@ -796,8 +786,7 @@ describe('NOVA-SERVER -> tests;', () => {
             });
 
             it('should emmit error with 401 status', done => {
-                fakeRequest.end(() => {
-                });
+                fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
                     expect(err.status).to.equal(401);
@@ -833,8 +822,7 @@ describe('NOVA-SERVER -> tests;', () => {
             });
 
             it('should emmit error with \'Failed to execute\' message', done => {
-                fakeRequest.end(() => {
-                });
+                fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
                     expect(err.message).to.match(/Failed to execute/);
@@ -843,8 +831,7 @@ describe('NOVA-SERVER -> tests;', () => {
             });
 
             it('should emmit error with 500 status', done => {
-                fakeRequest.end(() => {
-                });
+                fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
                     expect(err.status).to.be.undefined;
