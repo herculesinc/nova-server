@@ -98,8 +98,12 @@ describe('NOVA-SERVER -> Application;', () => {
             });
 
             app.on('error', err => {
-                expect(err.message).to.equal('Endpoint for / does not exist');
-                done();
+                try {
+                    expect(err.message).to.equal('Endpoint for / does not exist');
+                    done();
+                } catch (err) {
+                    done(err);
+                }
             });
         });
 
@@ -108,8 +112,12 @@ describe('NOVA-SERVER -> Application;', () => {
             });
 
             app.on('error', err => {
-                expect(err.status).to.equal(404);
-                done();
+                try {
+                    expect(err.status).to.equal(404);
+                    done();
+                } catch (err) {
+                    done(err);
+                }
             });
         });
     });

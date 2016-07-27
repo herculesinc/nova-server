@@ -882,8 +882,12 @@ describe('NOVA-SERVER -> RouteController;', () => {
                 fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
-                    expect(err.message).to.match(/Invalid token/);
-                    done()
+                    try {
+                        expect(err.message).to.match(/Invalid token/);
+                        done();
+                    } catch (err) {
+                        done(err);
+                    }
                 });
             });
 
@@ -891,8 +895,12 @@ describe('NOVA-SERVER -> RouteController;', () => {
                 fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
-                    expect(err.status).to.equal(401);
-                    done();
+                    try {
+                        expect(err.status).to.equal(401);
+                        done();
+                    } catch (err) {
+                        done(err);
+                    }
                 });
             });
         });
@@ -926,17 +934,12 @@ describe('NOVA-SERVER -> RouteController;', () => {
                 fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
-                    expect(err.message).to.match(/Failed to execute/);
-                    done()
-                });
-            });
-
-            it('should emmit error with 500 status', done => {
-                fakeRequest.end(() => undefined);
-
-                app.on('error', err => {
-                    expect(err.status).to.be.undefined;
-                    done();
+                    try {
+                        expect(err.message).to.match(/Failed to execute/);
+                        done();
+                    } catch (err) {
+                        done(err);
+                    }
                 });
             });
         });
