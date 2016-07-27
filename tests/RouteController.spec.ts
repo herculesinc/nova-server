@@ -48,179 +48,6 @@ describe('NOVA-SERVER -> RouteController;', () => {
         authenticator = sinon.stub().returns(Promise.resolve(authResult));
     });
 
-    describe('should create app;', () => {
-        beforeEach(() => {
-            appConfig = {
-                name    : 'Test API Server',
-                version : '0.0.1',
-                database: database
-            };
-        });
-
-        it('app object should be instance of Application', () => {
-            app = createApp(appConfig);
-
-            expect(app).to.be.instanceof(Application);
-        });
-
-        it('should return error if database was not provided', done => {
-            delete appConfig.database;
-
-            try {
-                app = createApp(appConfig);
-                done('should return error');
-            } catch (err) {
-                expect(err).to.match(/Database is undefined/);
-                done();
-            }
-        });
-
-        it('should return error if server name was not provided', done => {
-            delete appConfig.name;
-
-            try {
-                app = createApp(appConfig);
-                done('should return error');
-            } catch (err) {
-                expect(err).to.match(/name is undefined/);
-                done();
-            }
-        });
-
-        it('should return error if server version was not provided', done => {
-            delete appConfig.version;
-
-            try {
-                app = createApp(appConfig);
-                done('should return error');
-            } catch (err) {
-                expect(err).to.match(/version is undefined/);
-                done();
-            }
-        });
-    });
-
-    describe('should run app server without any attached routes;', () => {
-        beforeEach(() => {
-            appConfig = {
-                name    : 'Test API Server',
-                version : '0.0.1',
-                database: database
-            };
-
-            app = createApp(appConfig);
-            fakeRequest = request(app.webServer)
-                .get('/');
-
-            app.on('error', () => undefined);
-        });
-
-        it('should return 404', done => {
-            fakeRequest
-                .expect(404, done);
-        });
-
-        it('should emmit error with \'does not exist\' message', done => {
-            fakeRequest.end(() => {
-            });
-
-            app.on('error', err => {
-                expect(err.message).to.equal('Endpoint for / does not exist');
-                done();
-            });
-        });
-
-        it('should emmit error with 404 status', done => {
-            fakeRequest.end(() => {
-            });
-
-            app.on('error', err => {
-                expect(err.status).to.equal(404);
-                done();
-            });
-        });
-    });
-
-    describe('should run app server with one attached routes;', () => {
-        beforeEach(() => {
-            appConfig = {
-                name    : 'Test API Server',
-                version : '0.0.1',
-                database: database
-            };
-
-            app = createApp(appConfig);
-            router = new RouteController();
-            endpointConfig = {
-                action  : sinon.stub().returns(Promise.resolve({ results: 'action results' })),
-                response: sinon.stub().returns({ results: 'view results' })
-            };
-
-            routeConfig = {
-                get: endpointConfig
-            };
-        });
-
-        describe('should return status 204 and empty body when view function was not provided;', () => {
-            beforeEach(() => {
-                delete endpointConfig.response;
-                routeConfig = { get: endpointConfig };
-                router.set('/', routeConfig);
-                app.register('/', router);
-                app.on('error', () => undefined);
-                fakeRequest = request(app.webServer)
-                    .get('/')
-            });
-
-            it('should return status 204', done => {
-                fakeRequest
-                    .expect(204, done);
-            });
-
-            it('should return empty body', done => {
-                fakeRequest
-                    .expect(204)
-                    .end((err, res) => {
-                        if (err) {
-                            return done(err);
-                        }
-
-                        expect(res.body).to.be.empty;
-                        done();
-                    });
-            });
-        });
-
-        describe('should return status 200 and result object when view function was provided;', () => {
-            beforeEach(() => {
-                router.set('/', routeConfig);
-                app.register('/', router);
-                app.on('error', () => undefined);
-                fakeRequest = request(app.webServer)
-                    .get('/');
-            });
-
-            it('should return status 200', done => {
-                fakeRequest
-                    .expect(200, done);
-            });
-
-            it('should return view result in body', done => {
-                fakeRequest
-                    .expect(200)
-                    .end((err, res) => {
-                        if (err) {
-                            return done(err);
-                        }
-
-                        expect(res.body).to.not.be.empty;
-                        expect(res.body).to.deep.equal({ results: 'view results' });
-                        done();
-                    });
-            });
-        });
-    });
-
     describe('should create different api endpoints;', () => {
         beforeEach(() => {
             appConfig = {
@@ -324,6 +151,86 @@ describe('NOVA-SERVER -> RouteController;', () => {
             request(app.webServer)
                 .del('/users/31')
                 .expect(204, done);
+        });
+    });
+
+    describe('should run app server with one attached routes;', () => {
+        beforeEach(() => {
+            appConfig = {
+                name    : 'Test API Server',
+                version : '0.0.1',
+                database: database
+            };
+
+            app = createApp(appConfig);
+            router = new RouteController();
+            endpointConfig = {
+                action  : sinon.stub().returns(Promise.resolve({ results: 'action results' })),
+                response: sinon.stub().returns({ results: 'view results' })
+            };
+
+            routeConfig = {
+                get: endpointConfig
+            };
+        });
+
+        describe('should return status 204 and empty body when view function was not provided;', () => {
+            beforeEach(() => {
+                delete endpointConfig.response;
+                routeConfig = { get: endpointConfig };
+                router.set('/', routeConfig);
+                app.register('/', router);
+                app.on('error', () => undefined);
+                fakeRequest = request(app.webServer)
+                    .get('/')
+            });
+
+            it('should return status 204', done => {
+                fakeRequest
+                    .expect(204, done);
+            });
+
+            it('should return empty body', done => {
+                fakeRequest
+                    .expect(204)
+                    .end((err, res) => {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        expect(res.body).to.be.empty;
+                        done();
+                    });
+            });
+        });
+
+        describe('should return status 200 and result object when view function was provided;', () => {
+            beforeEach(() => {
+                router.set('/', routeConfig);
+                app.register('/', router);
+                app.on('error', () => undefined);
+                fakeRequest = request(app.webServer)
+                    .get('/');
+            });
+
+            it('should return status 200', done => {
+                fakeRequest
+                    .expect(200, done);
+            });
+
+            it('should return view result in body', done => {
+                fakeRequest
+                    .expect(200)
+                    .end((err, res) => {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        expect(res.body).to.not.be.empty;
+                        expect(res.body).to.deep.equal({ results: 'view results' });
+                        done();
+                    });
+            });
         });
     });
 
@@ -975,8 +882,12 @@ describe('NOVA-SERVER -> RouteController;', () => {
                 fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
-                    expect(err.message).to.match(/Invalid token/);
-                    done()
+                    try {
+                        expect(err.message).to.match(/Invalid token/);
+                        done();
+                    } catch (err) {
+                        done(err);
+                    }
                 });
             });
 
@@ -984,8 +895,12 @@ describe('NOVA-SERVER -> RouteController;', () => {
                 fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
-                    expect(err.status).to.equal(401);
-                    done();
+                    try {
+                        expect(err.status).to.equal(401);
+                        done();
+                    } catch (err) {
+                        done(err);
+                    }
                 });
             });
         });
@@ -1019,17 +934,12 @@ describe('NOVA-SERVER -> RouteController;', () => {
                 fakeRequest.end(() => undefined);
 
                 app.on('error', err => {
-                    expect(err.message).to.match(/Failed to execute/);
-                    done()
-                });
-            });
-
-            it('should emmit error with 500 status', done => {
-                fakeRequest.end(() => undefined);
-
-                app.on('error', err => {
-                    expect(err.status).to.be.undefined;
-                    done();
+                    try {
+                        expect(err.message).to.match(/Failed to execute/);
+                        done();
+                    } catch (err) {
+                        done(err);
+                    }
                 });
             });
         });

@@ -14,3 +14,4 @@
 /// <reference path="sinon/sinon.d.ts" />
 /// <reference path="superagent/superagent.d.ts" />
 /// <reference path="supertest/supertest.d.ts" />
+/// <reference path="socket.io-client/socket.io-client.d.ts" />
