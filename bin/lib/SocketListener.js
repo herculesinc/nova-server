@@ -48,7 +48,7 @@ class SocketListener {
             return;
         // build execution options
         const options = {
-            daoOptions: config.dao,
+            daoOptions: Object.assign({ startTransaction: false }, config.dao),
             rateLimits: config.rate,
             authOptions: config.auth
         };
