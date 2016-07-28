@@ -69,7 +69,7 @@ class RouteController {
         // attach route handlers to the router
         for (let [subpath, config] of this.routes) {
             const methods = ['OPTIONS'];
-            const fullpath = this.root + subpath;
+            const fullpath = joinUrl(this.root, subpath);
             const corsOptions = Object.assign({}, index_1.defaults.CORS, config.cors);
             router.all(this.root, function (request, response, next) {
                 // add CORS response headers for all requests
@@ -128,7 +128,7 @@ class RouteController {
         const config = configOrHandler;
         // make sure transactions are started for non-readonly handlers
         const options = {
-            daoOptions: Object.assign({}, { startTransaction: !readonly }, config.dao),
+            daoOptions: Object.assign({ startTransaction: !readonly }, config.dao),
             rateLimits: config.rate,
             authOptions: config.auth
         };
@@ -170,6 +170,14 @@ class RouteController {
                             : config.response.view(result, config.response.options);
                         if (!view)
                             throw new nova_base_1.Exception('Resource not found', 404 /* NotFound */);
+                        switch (typeof view) {
+                            case 'string':
+                            case 'number':
+                            case 'boolean':
+                            case 'function':
+                            case 'symbol':
+                                throw new nova_base_1.Exception(`View for ${request.method} ${request.path} returned invalid value`);
+                        }
                         response.json(view);
                     }
                     else {
@@ -189,6 +197,15 @@ class RouteController {
 exports.RouteController = RouteController;
 // HELPER FUNCTIONS
 // =================================================================================================
+function joinUrl(root, subpath) {
+    if (root.charAt(root.length - 1) !== '/') {
+        root = root + '/';
+    }
+    if (subpath.charAt(0) === '/') {
+        subpath = subpath.substring(1);
+    }
+    return root + subpath;
+}
 function getTypeCheckers(config, expectsResponse) {
     const checkers = [];
     // check body type

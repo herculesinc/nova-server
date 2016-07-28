@@ -32,7 +32,6 @@ class SocketListener {
         // initialize listener variables
         this.topic = topic;
         this.context = context;
-        this.rateLimits = undefined; // TODO: set to something
         // attach event handlers to the socket
         io.of(topic).on(CONNECT_EVENT, (socket) => {
             // attach event handlers handlers
@@ -48,7 +47,7 @@ class SocketListener {
             return;
         // build execution options
         const options = {
-            daoOptions: config.dao,
+            daoOptions: Object.assign({ startTransaction: false }, config.dao),
             rateLimits: config.rate,
             authOptions: config.auth
         };

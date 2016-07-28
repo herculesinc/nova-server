@@ -36,8 +36,6 @@ export class SocketListener {
     context     : ExecutorContext;
     handlers    : Map<string, HandlerConfig<any,any>>;
 
-    rateLimits  : RateOptions;
-
     // CONSTRUCTOR
     // --------------------------------------------------------------------------------------------
     constructor(name?: string) {
@@ -63,8 +61,6 @@ export class SocketListener {
         this.topic = topic;
         this.context = context;
 
-        this.rateLimits = undefined; // TODO: set to something
-
         // attach event handlers to the socket
         io.of(topic).on(CONNECT_EVENT, (socket) => {
             // attach event handlers handlers
@@ -81,7 +77,7 @@ export class SocketListener {
 
         // build execution options
         const options: ExecutionOptions = {
-            daoOptions  : config.dao,
+            daoOptions  : Object.assign({ startTransaction: false }, config.dao),
             rateLimits  : config.rate,
             authOptions : config.auth
         };

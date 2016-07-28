@@ -803,9 +803,9 @@ describe('NOVA-SERVER -> RouteController;', () => {
                     .get('/');
             });
 
-            it('should return 415', done => {
+            it('should return 500', done => {
                 fakeRequest
-                    .expect(415, done);
+                    .expect(500, done);
             });
         });
 
