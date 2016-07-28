@@ -132,7 +132,7 @@ class RouteController {
         const config = configOrHandler;
         // make sure transactions are started for non-readonly handlers
         const options = {
-            daoOptions: Object.assign({}, config.dao, { startTransaction: !readonly }),
+            daoOptions: Object.assign({}, { startTransaction: !readonly }, config.dao),
             rateLimits: config.rate,
             authOptions: config.auth
         };
