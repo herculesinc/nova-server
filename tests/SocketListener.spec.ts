@@ -25,7 +25,7 @@ const adapterResult: any = { results: 'adapter results' };
 const authOptions: any = { isRequired: false };
 const listenerDaoOptions: DaoOptions = { startTransaction: true };
 const authToken: string = 'testAuthToken';
-const testPort: number = 3000;
+const testPort: number = 8888;
 
 const payload: any = {
     id    : '12345',
