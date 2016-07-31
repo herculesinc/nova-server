@@ -25,6 +25,27 @@
     },
     "on-headers/on-headers.d.ts": {
       "commit": "7d6547a8a0c3f35ce5de82ba58bfd143c0d20fab"
+    },
+    "chai/chai.d.ts": {
+      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+    },
+    "assertion-error/assertion-error.d.ts": {
+      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+    },
+    "sinon/sinon.d.ts": {
+      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+    },
+    "socket.io-client/socket.io-client.d.ts": {
+      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+    },
+    "mocha/mocha.d.ts": {
+      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+    },
+    "supertest/supertest.d.ts": {
+      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+    },
+    "superagent/superagent.d.ts": {
+      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
     }
   }
 }
