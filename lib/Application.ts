@@ -9,7 +9,7 @@ import * as responseTime from 'response-time';
 import * as toobusy from 'toobusy-js';
 import {
     Database, Cache, Dispatcher, Authenticator, RateLimiter, Logger, Exception, HttpStatusCode,
-    Executor, ExecutorContext, ActionContext, TooBusyError, RateOptions
+    Executor, ExecutorContext, ExecutionOptions, ActionContext, TooBusyError, RateOptions
 } from 'nova-base';
 
 import { RouteController } from './RouteController';
@@ -31,6 +31,12 @@ const headers = {
 
 const DEFAULT_WEB_SERVER_CONFIG: WebServerConfig = {
     trustProxy  : true
+};
+
+const DEFAULT_AUTH_EXEC_OPTIONS: ExecutionOptions = {
+    daoOptions: {
+        startTransaction: false
+    }
 };
 
 // INTERFACES
@@ -96,7 +102,7 @@ export class Application extends EventEmitter {
         this.socketListeners = new Map();
         
         // initialize auth executor
-        this.authExecutor = new Executor(this.context, authenticateSocket, socketAuthAdapter);
+        this.authExecutor = new Executor(this.context, authenticateSocket, socketAuthAdapter, DEFAULT_AUTH_EXEC_OPTIONS);
 
         // set up lag handling
         toobusy.onLag((lag) => {

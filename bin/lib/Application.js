@@ -25,6 +25,11 @@ const headers = {
 const DEFAULT_WEB_SERVER_CONFIG = {
     trustProxy: true
 };
+const DEFAULT_AUTH_EXEC_OPTIONS = {
+    daoOptions: {
+        startTransaction: false
+    }
+};
 // CLASS DEFINITION
 // =================================================================================================
 class Application extends events_1.EventEmitter {
@@ -46,7 +51,7 @@ class Application extends events_1.EventEmitter {
         this.routeControllers = new Map();
         this.socketListeners = new Map();
         // initialize auth executor
-        this.authExecutor = new nova_base_1.Executor(this.context, authenticateSocket, socketAuthAdapter);
+        this.authExecutor = new nova_base_1.Executor(this.context, authenticateSocket, socketAuthAdapter, DEFAULT_AUTH_EXEC_OPTIONS);
         // set up lag handling
         toobusy.onLag((lag) => {
             this.emit(LAG_EVENT, lag);
