@@ -17,25 +17,34 @@ class SocketListener {
     // PUBLIC METHODS
     // --------------------------------------------------------------------------------------------
     on(event, config) {
+        // check event parameter
         if (!event)
-            throw new Error('Event cannot be undefined');
-        if (!config)
-            throw new Error('Handler configuration cannot be undefined');
+            throw new TypeError(`Socket event '${event}' is invalid`);
+        if (typeof event !== 'string')
+            throw new TypeError('Socket event must be a string');
         if (this.handlers.has(event))
-            throw new Error(`Event {${event}} has already been bound to a handler`);
+            throw new Error(`Socket Event {${event}} has already been bound to a handler`);
+        // check config parameter
+        if (!config)
+            throw new TypeError('Socket event handler configuration cannot be undefined');
+        // register the event
         this.handlers.set(event, config);
     }
     attach(topic, io, context, onerror) {
-        // check if the listener has already been attached
+        // check if the listener can be bound to this topic
+        if (!topic)
+            throw new TypeError(`Cannot attach socket listener to '${topic}' topic`);
+        if (typeof topic !== 'string')
+            throw new TypeError(`Socket listener topic must be a string`);
         if (this.topic)
-            throw new Error(`Listener has alread been bound to ${this.topic} topic`);
+            throw new Error(`Socket listener has alread been bound to '${this.topic}' topic`);
+        if (!context)
+            throw new TypeError(`Socket listener cannot be attached to an undefined context`);
         // initialize listener variables
         this.topic = topic;
         this.context = context;
-        this.rateLimits = undefined; // TODO: set to something
         // attach event handlers to the socket
         io.of(topic).on(CONNECT_EVENT, (socket) => {
-            // attach event handlers handlers
             for (let [event, config] of this.handlers) {
                 socket.on(event, this.buildEventHandler(config, socket, onerror));
             }

@@ -20,6 +20,11 @@ const LAG_EVENT = 'lag';
 const DEFAULT_WEB_SERVER_CONFIG = {
     trustProxy: true
 };
+const DEFAULT_AUTH_EXEC_OPTIONS = {
+    daoOptions: {
+        startTransaction: false
+    }
+};
 // CLASS DEFINITION
 // =================================================================================================
 class Application extends events.EventEmitter {
@@ -41,30 +46,31 @@ class Application extends events.EventEmitter {
         this.routeControllers = new Map();
         this.socketListeners = new Map();
         // initialize auth executor
-        this.authExecutor = new nova.Executor(this.context, authenticateSocket, socketAuthAdapter);
+        this.authExecutor = new nova.Executor(this.context, authenticateSocket, socketAuthAdapter, DEFAULT_AUTH_EXEC_OPTIONS);
         // set up lag handling
         toobusy.onLag((lag) => {
             this.emit(LAG_EVENT, lag);
         });
     }
     register(path, controllerOrListener) {
-        if (!path)
-            throw new Error('Cannot register controller or listener: path is undefined');
         if (!controllerOrListener)
-            throw new Error('Cannot register controller or listener: router or listener is undefined');
+            throw new TypeError('Cannot register controller or listener: router or listener is undefined');
         if (controllerOrListener instanceof RouteController_1.RouteController) {
             if (this.routeControllers.has(path))
-                throw Error(`Path {${path}} has already been attached to a router`);
+                throw TypeError(`Path '${path}' has already been attached to a router`);
             controllerOrListener.attach(path, this.router, this.context);
             this.routeControllers.set(path, controllerOrListener);
         }
         else if (controllerOrListener instanceof SocketListener_1.SocketListener) {
             if (this.socketListeners.has(path))
-                throw Error(`Topic {${path}} has been already attached to a listener`);
+                throw TypeError(`Topic ${path}' has been already attached to a listener`);
             controllerOrListener.attach(path, this.ioServer, this.context, (error) => {
                 this.emit(ERROR_EVENT, error);
             });
             this.socketListeners.set(path, controllerOrListener);
+        }
+        else {
+            throw TypeError(`Controller or listener type is invalid`);
         }
     }
     // PRIVATE METHODS

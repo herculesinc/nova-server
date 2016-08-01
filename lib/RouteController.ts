@@ -119,19 +119,31 @@ export class RouteController {
     // PUBLIC METHODS
     // --------------------------------------------------------------------------------------------
     set(path: string, config: RouteConfig) {
-        if (!path) throw new Error('Path cannot be undefined');
-        if (!config) throw new Error('Route configuration cannot be undefined');
+        // check path parameter
+        if (!path) throw new TypeError(`Route path '${path}' is not valid`);
+        if (typeof path !== 'string') throw new TypeError(`Route path must be a string`);
+        if (path.charAt(0) === '/')
+            path = path.substring(1);
         if (this.routes.has(path))
-            throw new Error(`Path {${path}} has already been bound to a handler`);
+            throw new Error(`Route path {${path}} has already been bound to a handler`);
+
+        // check config parameter
+        if (!config) throw new TypeError('Route configuration cannot be undefined');
+
+        // register the route
         this.routes.set(path, config);
     }
 
     attach(root: string, router: Router, context: ExecutorContext) {
-        // check if the controller has already been attached
-        if (this.root) throw new Error(`Controller has alread been bound to ${this.root} root`);
+        // check if the controller can be attached to this root
+        if (!root) throw new TypeError(`Cannot attach route controller to '${root}' root`);
+        if (typeof root !== 'string') throw new TypeError(`Route controller root must be a string`);
+        if (this.root) throw new TypeError(`Route controller has alread been bound to '${this.root}'`);
+
+        if (!context) throw new TypeError(`Route controller cannot be attached to an undefined context`);
 
         // initialize controller variables
-        this.root = root;
+        this.root = (root.charAt(root.length - 1) !== '/') ? root + '/' : root;
         this.context = context;
 
         // get the logger from context
@@ -140,7 +152,7 @@ export class RouteController {
         // attach route handlers to the router
         for (let [subpath, config] of this.routes) {
             const methods = ['OPTIONS'];
-            const route = router.route(joinUrl(this.root,subpath));
+            const route = router.route(this.root + subpath);
             const corsOptions: CorsOptions = Object.assign({}, defaults.CORS, config.cors);
 
             route.all(function(request: Request, response: Response, next: Function) {
@@ -227,8 +239,6 @@ export class RouteController {
         // build endpoint handler
         handlers.push(async function(request: Request, response: Response, next: Function) {
             try {
-                // TODO: convert to regular (not asnyc) function
-
                 // build inputs object
                 const inputs = config.body && config.body.type === 'files' 
                     ? Object.assign({}, config.defaults, request.query, request.params, { files: request.files })
@@ -289,18 +299,6 @@ export class RouteController {
 
 // HELPER FUNCTIONS
 // =================================================================================================
-function joinUrl(root: string, subpath: string): string {
-    if (root.charAt(root.length - 1) !== '/') {
-        root = root + '/';
-    }
-
-    if (subpath.charAt(0) === '/') {
-        subpath = subpath.substring(1);
-    }
-
-    return root + subpath;
-}
-
 function getTypeCheckers(config: JsonBodyOptions | FileBodyOptions, expectsResponse: boolean): RequestHandler[] {
     const checkers = [];
 
@@ -312,7 +310,7 @@ function getTypeCheckers(config: JsonBodyOptions | FileBodyOptions, expectsRespo
         checkers.push(BODY_TYPE_CHECKERS.files);
     }
     else {
-        throw new Error(`Body type ${config.type} is not supported`);
+        throw new TypeError(`Body type '${config.type}' is not supported`);
     }
     
     // check accepts
@@ -333,10 +331,10 @@ function getBodyParser(config: JsonBodyOptions | FileBodyOptions): RequestHandle
         const fConfig = config as FileBodyOptions;
 
         // validate config object
-        if (typeof fConfig.field !== 'string') throw new Error(`'field' is undefined in file body options`);
-        if (!fConfig.limits) throw new Error(`'limits' are undefined in file body options`);
+        if (typeof fConfig.field !== 'string') throw new TypeError(`'field' is undefined in file body options`);
+        if (!fConfig.limits) throw new TypeError(`'limits' are undefined in file body options`);
         if (typeof fConfig.limits.size !== 'number' || typeof fConfig.limits.count !== 'number') 
-            throw new Error(`'limits' are invalid in file body options`);
+            throw new TypeError(`'limits' are invalid in file body options`);
 
         // build middleware
         return multer({
@@ -348,7 +346,7 @@ function getBodyParser(config: JsonBodyOptions | FileBodyOptions): RequestHandle
         }).array(fConfig.field);
     }
     else {
-        throw new Error(`Body type ${config.type} is not supported`);
+        throw new TypeError(`Body type '${config.type}' is not supported`);
     }
 }
 
@@ -367,7 +365,7 @@ function buildExecutorMap<V,T>(config: EndpointConfig<V,T>, context: ExecutorCon
         executorMap.set(undefined, executor);
     }
     else {
-        throw new Error('Cannot create an executor: no endpoint actions provided');
+        throw new TypeError('Cannot create an executor: no endpoint actions provided');
     }
 
     return executorMap;

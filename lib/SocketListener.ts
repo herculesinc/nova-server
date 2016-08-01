@@ -33,8 +33,6 @@ export class SocketListener {
     context     : nova.ExecutorContext;
     handlers    : Map<string, HandlerConfig<any,any>>;
 
-    rateLimits  : nova.RateOptions;
-
     // CONSTRUCTOR
     // --------------------------------------------------------------------------------------------
     constructor(name?: string) {
@@ -45,26 +43,33 @@ export class SocketListener {
     // PUBLIC METHODS
     // --------------------------------------------------------------------------------------------
     on<V,T>(event: string, config: HandlerConfig<V,T>) {
-        if (!event) throw new Error('Event cannot be undefined');
-        if (!config) throw new Error('Handler configuration cannot be undefined');
+        // check event parameter
+        if (!event) throw new TypeError(`Socket event '${event}' is invalid`);
+        if (typeof event !== 'string') throw new TypeError('Socket event must be a string');
         if (this.handlers.has(event))
-            throw new Error(`Event {${event}} has already been bound to a handler`);
+            throw new Error(`Socket Event {${event}} has already been bound to a handler`);
+
+        // check config parameter
+        if (!config) throw new TypeError('Socket event handler configuration cannot be undefined');
+
+        // register the event
         this.handlers.set(event, config);
     }
 
     attach(topic: string, io: SocketIO.Server, context: nova.ExecutorContext, onerror: (error: Error) => void) {
-        // check if the listener has already been attached
-        if (this.topic) throw new Error(`Listener has alread been bound to ${this.topic} topic`);
+        // check if the listener can be bound to this topic
+        if (!topic) throw new TypeError(`Cannot attach socket listener to '${topic}' topic`);
+        if (typeof topic !== 'string') throw new TypeError(`Socket listener topic must be a string`);
+        if (this.topic) throw new Error(`Socket listener has alread been bound to '${this.topic}' topic`);
+
+        if (!context) throw new TypeError(`Socket listener cannot be attached to an undefined context`);
 
         // initialize listener variables
         this.topic = topic;
         this.context = context;
 
-        this.rateLimits = undefined; // TODO: set to something
-
         // attach event handlers to the socket
         io.of(topic).on(CONNECT_EVENT, (socket) => {
-            // attach event handlers handlers
             for (let [event, config] of this.handlers) {
                 socket.on(event, this.buildEventHandler(config, socket, onerror));
             }
