@@ -1,6 +1,6 @@
 {
   "name": "nova-server",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Action-based Web API framework written in TypeScript",
   "keywords": [
     "nova",
@@ -40,9 +40,14 @@
     "type-is": "1.6.x"
   },
   "devDependencies": {
+    "chai": "3.5.x",
     "del": "2.2.x",
     "gulp": "3.9.x",
     "gulp-mocha": "2.2.x",
-    "gulp-util": "3.0.x"
+    "gulp-util": "3.0.x",
+    "mocha": "2.5.x",
+    "sinon": "1.17.x",
+    "socket.io-client": "1.4.x",
+    "supertest": "1.2.x"
   }
 }
