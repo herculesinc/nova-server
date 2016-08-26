@@ -88,9 +88,13 @@ export interface ViewBuilder<T> {
     (result: T, options?: any): any;
 }
 
+export interface ViewOptionsBuilder {
+    (inputs: any, result: any): any;
+}
+
 export interface ResponseOptions<T> {
     view        : ViewBuilder<T>,
-    options?    : any;
+    options?    : ViewOptionsBuilder | any;
 }
 
 interface CorsOptions {
@@ -265,9 +269,17 @@ export class RouteController {
 
                 // build response
                 if (config.response) {
-                    const view = typeof config.response === 'function'
-                        ? config.response(result)
-                        : config.response.view(result, config.response.options);
+                    let view: any;
+                    if (typeof config.response === 'function') {
+                        view = config.response(result); 
+                    }
+                    else {
+                        const viewBuilderOptions = (typeof config.response.options === 'function')
+                            ? config.response.options(inputs, result)
+                            : config.response.options;
+                        view = config.response.view(result, viewBuilderOptions);
+                    }
+
                     if (!view) throw new Exception('Resource not found', HttpStatusCode.NotFound);
                     switch (typeof view) {
                         case 'string':

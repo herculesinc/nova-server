@@ -83,9 +83,13 @@ declare module "nova-server" {
         (result: T, options?: any): any;
     }
 
+    export interface ViewOptionsBuilder {
+        (inputs: any, result: any): any;
+    }
+
     export interface ResponseOptions<T> {
         view        : ViewBuilder<T>,
-        options?    : any;
+        options?    : ViewOptionsBuilder | any;
     }
 
     export interface RequestBodyOptions {

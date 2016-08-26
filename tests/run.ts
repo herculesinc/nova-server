@@ -22,7 +22,12 @@ controller.set('/', {
     get: {
         adapter     : adapters.helloWorldAdapter,
         action      : actions.helloWorldAction,
-        response    : views.generateHelloWorldView
+        response: {
+            view    : views.generateHelloWorldView,
+            options : function(inputs: any, result: any) {
+                console.log('in view option builder');
+            } 
+        } 
     }
 });
 

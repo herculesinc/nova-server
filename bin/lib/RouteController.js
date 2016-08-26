@@ -181,9 +181,16 @@ class RouteController {
                     const result = yield executor.execute(inputs, requestor);
                     // build response
                     if (config.response) {
-                        const view = typeof config.response === 'function'
-                            ? config.response(result)
-                            : config.response.view(result, config.response.options);
+                        let view;
+                        if (typeof config.response === 'function') {
+                            view = config.response(result);
+                        }
+                        else {
+                            const viewBuilderOptions = (typeof config.response.options === 'function')
+                                ? config.response.options(inputs, result)
+                                : config.response.options;
+                            view = config.response.view(result, viewBuilderOptions);
+                        }
                         if (!view)
                             throw new nova_base_1.Exception('Resource not found', 404 /* NotFound */);
                         switch (typeof view) {
