@@ -89,7 +89,7 @@ export interface ViewBuilder<T> {
 }
 
 export interface ViewOptionsBuilder {
-    (inputs: any, result: any): any;
+    (inputs: any, result: any, requestor: string): any;
 }
 
 export interface ResponseOptions<T> {
@@ -275,20 +275,13 @@ export class RouteController {
                     }
                     else {
                         const viewBuilderOptions = (typeof config.response.options === 'function')
-                            ? config.response.options(inputs, result)
+                            ? config.response.options(inputs, result, requestor)
                             : config.response.options;
                         view = config.response.view(result, viewBuilderOptions);
                     }
 
                     if (!view) throw new Exception('Resource not found', HttpStatusCode.NotFound);
-                    switch (typeof view) {
-                        case 'string':
-                        case 'number':
-                        case 'boolean':
-                        case 'function':
-                        case 'symbol':
-                            throw new Exception(`View for ${request.method} ${request.path} returned invalid value`);                        
-                    }
+                    if (typeof view !== 'object') throw new Exception(`View for ${request.method} ${request.path} returned invalid value`);
                     
                     response.statusCode = HttpStatusCode.OK;
                     response.setHeader('Content-Type', 'application/json; charset=utf-8');

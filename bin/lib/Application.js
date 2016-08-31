@@ -147,8 +147,12 @@ function validateOptions(options) {
     options = Object.assign({}, options);
     if (!options.name)
         throw new TypeError('Cannot create an app: name is undefined');
+    if (typeof options.name !== 'string' || options.name.trim().length === 0)
+        throw new TypeError('Cannot create an app: name must be a non-empty string');
     if (!options.version)
         throw new TypeError('Cannot create an app: version is undefined');
+    if (typeof options.version !== 'string' || options.version.trim().length === 0)
+        throw new TypeError('Cannot create an app: version must be a non-empty string');
     return options;
 }
 function socketAuthAdapter(inputs, authInfo) {

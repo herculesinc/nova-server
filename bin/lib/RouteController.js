@@ -187,20 +187,14 @@ class RouteController {
                         }
                         else {
                             const viewBuilderOptions = (typeof config.response.options === 'function')
-                                ? config.response.options(inputs, result)
+                                ? config.response.options(inputs, result, requestor)
                                 : config.response.options;
                             view = config.response.view(result, viewBuilderOptions);
                         }
                         if (!view)
                             throw new nova_base_1.Exception('Resource not found', 404 /* NotFound */);
-                        switch (typeof view) {
-                            case 'string':
-                            case 'number':
-                            case 'boolean':
-                            case 'function':
-                            case 'symbol':
-                                throw new nova_base_1.Exception(`View for ${request.method} ${request.path} returned invalid value`);
-                        }
+                        if (typeof view !== 'object')
+                            throw new nova_base_1.Exception(`View for ${request.method} ${request.path} returned invalid value`);
                         response.statusCode = 200 /* OK */;
                         response.setHeader('Content-Type', 'application/json; charset=utf-8');
                         response.end(JSON.stringify(view), 'utf8');
