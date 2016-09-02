@@ -2,26 +2,21 @@
 // IMPORTS
 // =================================================================================================
 const http = require('http');
-const events_1 = require('events');
-const express = require('express');
+const events = require('events');
+const Router = require('router');
 const socketio = require('socket.io');
-const responseTime = require('response-time');
 const toobusy = require('toobusy-js');
-const nova_base_1 = require('nova-base');
+const nova = require('nova-base');
 const RouteController_1 = require('./RouteController');
 const SocketListener_1 = require('./SocketListener');
 const SocketNotifier_1 = require('./SocketNotifier');
 const util_1 = require('./util');
+const firsthandler_1 = require('./routing/firsthandler');
 const finalhandler_1 = require('./routing/finalhandler');
 // MODULE VARIABLES
 // =================================================================================================
 const ERROR_EVENT = 'error';
 const LAG_EVENT = 'lag';
-const headers = {
-    SERVER_NAME: 'X-Server-Name',
-    API_VERSION: 'X-Api-Version',
-    RSPONSE_TIME: 'X-Response-Time'
-};
 const DEFAULT_WEB_SERVER_CONFIG = {
     trustProxy: true
 };
@@ -32,7 +27,7 @@ const DEFAULT_AUTH_EXEC_OPTIONS = {
 };
 // CLASS DEFINITION
 // =================================================================================================
-class Application extends events_1.EventEmitter {
+class Application extends events.EventEmitter {
     // CONSTRUCTOR
     // --------------------------------------------------------------------------------------------
     constructor(options) {
@@ -51,30 +46,31 @@ class Application extends events_1.EventEmitter {
         this.routeControllers = new Map();
         this.socketListeners = new Map();
         // initialize auth executor
-        this.authExecutor = new nova_base_1.Executor(this.context, authenticateSocket, socketAuthAdapter, DEFAULT_AUTH_EXEC_OPTIONS);
+        this.authExecutor = new nova.Executor(this.context, authenticateSocket, socketAuthAdapter, DEFAULT_AUTH_EXEC_OPTIONS);
         // set up lag handling
         toobusy.onLag((lag) => {
             this.emit(LAG_EVENT, lag);
         });
     }
-    register(path, routerOrListener) {
-        if (!path)
-            throw new Error('Cannot register router or listener: path is undefined');
-        if (!routerOrListener)
-            throw new Error('Cannot register router or listener: router or listener is undefined');
-        if (routerOrListener instanceof RouteController_1.RouteController) {
+    register(path, controllerOrListener) {
+        if (!controllerOrListener)
+            throw new TypeError('Cannot register controller or listener: router or listener is undefined');
+        if (controllerOrListener instanceof RouteController_1.RouteController) {
             if (this.routeControllers.has(path))
-                throw Error(`Path {${path}} has already been attached to a router`);
-            routerOrListener.attach(path, this.router, this.context);
-            this.routeControllers.set(path, routerOrListener);
+                throw TypeError(`Path '${path}' has already been attached to a router`);
+            controllerOrListener.attach(path, this.router, this.context);
+            this.routeControllers.set(path, controllerOrListener);
         }
-        else if (routerOrListener instanceof SocketListener_1.SocketListener) {
+        else if (controllerOrListener instanceof SocketListener_1.SocketListener) {
             if (this.socketListeners.has(path))
-                throw Error(`Topic {${path}} has been already attached to a listener`);
-            routerOrListener.attach(path, this.ioServer, this.context, (error) => {
+                throw TypeError(`Topic ${path}' has been already attached to a listener`);
+            controllerOrListener.attach(path, this.ioServer, this.context, (error) => {
                 this.emit(ERROR_EVENT, error);
             });
-            this.socketListeners.set(path, routerOrListener);
+            this.socketListeners.set(path, controllerOrListener);
+        }
+        else {
+            throw TypeError(`Controller or listener type is invalid`);
         }
     }
     // PRIVATE METHODS
@@ -83,21 +79,9 @@ class Application extends events_1.EventEmitter {
         options = Object.assign({}, DEFAULT_WEB_SERVER_CONFIG, options);
         // create express app
         this.webServer = options.server || http.createServer();
-        this.router = express();
-        // configure express app
-        this.router.set('trust proxy', options.trustProxy);
-        this.router.set('x-powered-by', false);
-        this.router.set('etag', false);
-        // calculate response time
-        this.router.use(responseTime({ digits: 0, suffix: false, header: headers.RSPONSE_TIME }));
-        // set version header
-        this.router.use((request, response, next) => {
-            response.set({
-                [headers.SERVER_NAME]: this.name,
-                [headers.API_VERSION]: this.version
-            });
-            next();
-        });
+        this.router = Router();
+        // attache the first handler
+        this.router.use(firsthandler_1.firsthandler(this.name, this.version, options));
         // bind express app to the server
         this.webServer.on('request', (request, response) => {
             // use custom final handler with express
@@ -114,7 +98,7 @@ class Application extends events_1.EventEmitter {
             try {
                 // reject new connections if the server is too busy
                 if (toobusy())
-                    throw new nova_base_1.TooBusyError();
+                    throw new nova.TooBusyError();
                 // get and parse auth data from handshake
                 const query = socket.handshake.query;
                 const authInputs = util_1.parseAuthHeader(query['authorization'] || query['Authorization']);
@@ -163,8 +147,12 @@ function validateOptions(options) {
     options = Object.assign({}, options);
     if (!options.name)
         throw new TypeError('Cannot create an app: name is undefined');
+    if (typeof options.name !== 'string' || options.name.trim().length === 0)
+        throw new TypeError('Cannot create an app: name must be a non-empty string');
     if (!options.version)
         throw new TypeError('Cannot create an app: version is undefined');
+    if (typeof options.version !== 'string' || options.version.trim().length === 0)
+        throw new TypeError('Cannot create an app: version must be a non-empty string');
     return options;
 }
 function socketAuthAdapter(inputs, authInfo) {

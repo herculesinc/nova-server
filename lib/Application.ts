@@ -2,20 +2,17 @@
 // =================================================================================================
 import * as http from 'http';
 import * as https from 'https';
-import { EventEmitter } from 'events';
-import * as express from 'express';
+import * as events from 'events';
+import * as Router from 'router';
 import * as socketio from 'socket.io';
-import * as responseTime from 'response-time';
 import * as toobusy from 'toobusy-js';
-import {
-    Database, Cache, Dispatcher, Authenticator, RateLimiter, Logger, Exception, HttpStatusCode,
-    Executor, ExecutorContext, ExecutionOptions, ActionContext, TooBusyError, RateOptions
-} from 'nova-base';
+import * as nova from 'nova-base';
 
 import { RouteController } from './RouteController';
 import { SocketListener, symSocketAuthInputs } from './SocketListener';
 import { SocketNotifier } from './SocketNotifier';
 import { parseAuthHeader } from './util';
+import { firsthandler } from './routing/firsthandler';
 import { finalhandler } from './routing/finalhandler';
 
 // MODULE VARIABLES
@@ -23,17 +20,11 @@ import { finalhandler } from './routing/finalhandler';
 const ERROR_EVENT = 'error';
 const LAG_EVENT = 'lag';
 
-const headers = {
-    SERVER_NAME : 'X-Server-Name',
-    API_VERSION : 'X-Api-Version',
-    RSPONSE_TIME: 'X-Response-Time'
-};
-
 const DEFAULT_WEB_SERVER_CONFIG: WebServerConfig = {
     trustProxy  : true
 };
 
-const DEFAULT_AUTH_EXEC_OPTIONS: ExecutionOptions = {
+const DEFAULT_AUTH_EXEC_OPTIONS: nova.ExecutionOptions = {
     daoOptions: {
         startTransaction: false
     }
@@ -46,13 +37,13 @@ export interface AppConfig {
     version         : string;
     webServer?      : WebServerConfig;
     ioServer?       : socketio.ServerOptions;
-    authenticator?  : Authenticator;
-    database        : Database;
-    cache?          : Cache;
-    dispatcher?     : Dispatcher;
-    limiter?        : RateLimiter;
-    rateLimits?     : RateOptions;
-    logger?         : Logger;
+    authenticator?  : nova.Authenticator;
+    database        : nova.Database;
+    cache?          : nova.Cache;
+    dispatcher?     : nova.Dispatcher;
+    limiter?        : nova.RateLimiter;
+    rateLimits?     : nova.RateOptions;
+    logger?         : nova.Logger;
     settings?       : any;
 }
 
@@ -63,11 +54,11 @@ export interface WebServerConfig {
 
 // CLASS DEFINITION
 // =================================================================================================
-export class Application extends EventEmitter {
-    
+export class Application extends events.EventEmitter {
+
     name            : string;
     version         : string;
-    context         : ExecutorContext;
+    context         : nova.ExecutorContext;
 
     webServer       : http.Server | https.Server;
     ioServer        : socketio.Server;
@@ -75,8 +66,8 @@ export class Application extends EventEmitter {
     routeControllers: Map<string, RouteController>;
     socketListeners : Map<string, SocketListener>;
 
-    router          : express.Application;
-    authExecutor    : Executor<string, string>;
+    router          : Router.Router;
+    authExecutor    : nova.Executor<string, string>;
 
     // CONSTRUCTOR
     // --------------------------------------------------------------------------------------------
@@ -100,36 +91,38 @@ export class Application extends EventEmitter {
         // create router and listener maps
         this.routeControllers = new Map();
         this.socketListeners = new Map();
-        
+
         // initialize auth executor
-        this.authExecutor = new Executor(this.context, authenticateSocket, socketAuthAdapter, DEFAULT_AUTH_EXEC_OPTIONS);
+        this.authExecutor = new nova.Executor(this.context, authenticateSocket, socketAuthAdapter, DEFAULT_AUTH_EXEC_OPTIONS);
 
         // set up lag handling
         toobusy.onLag((lag) => {
             this.emit(LAG_EVENT, lag);
         });
     }
-    
+
     // PUBLIC METHODS
     // --------------------------------------------------------------------------------------------
-    register(root: string, router: RouteController);
+    register(root: string, controller: RouteController);
     register(topic: string, listener: SocketListener)
-    register(path: string, routerOrListener: RouteController | SocketListener) {
-        if (!path) throw new Error('Cannot register router or listener: path is undefined');
-        if (!routerOrListener) throw new Error('Cannot register router or listener: router or listener is undefined');
+    register(path: string, controllerOrListener: RouteController | SocketListener) {
+        if (!controllerOrListener) throw new TypeError('Cannot register controller or listener: router or listener is undefined');
 
-        if (routerOrListener instanceof RouteController) {
-            if (this.routeControllers.has(path)) throw Error(`Path {${path}} has already been attached to a router`);
-            routerOrListener.attach(path, this.router, this.context);
-            this.routeControllers.set(path, routerOrListener);
+        if (controllerOrListener instanceof RouteController) {
+            if (this.routeControllers.has(path)) throw TypeError(`Path '${path}' has already been attached to a router`);
+            controllerOrListener.attach(path, this.router, this.context);
+            this.routeControllers.set(path, controllerOrListener);
         }
-        else if (routerOrListener instanceof SocketListener) {
-            if (this.socketListeners.has(path)) throw Error(`Topic {${path}} has been already attached to a listener`);
-            routerOrListener.attach(path, this.ioServer, this.context, (error: Error) => {
+        else if (controllerOrListener instanceof SocketListener) {
+            if (this.socketListeners.has(path)) throw TypeError(`Topic ${path}' has been already attached to a listener`);
+            controllerOrListener.attach(path, this.ioServer, this.context, (error: Error) => {
                 this.emit(ERROR_EVENT, error);
             });
-            this.socketListeners.set(path, routerOrListener);
-        }    
+            this.socketListeners.set(path, controllerOrListener);
+        }
+        else {
+            throw TypeError(`Controller or listener type is invalid`);
+        }
     }
 
     // PRIVATE METHODS
@@ -139,24 +132,10 @@ export class Application extends EventEmitter {
 
         // create express app
         this.webServer = options.server || http.createServer();
-        this.router = express();
+        this.router = Router();
 
-        // configure express app
-        this.router.set('trust proxy', options.trustProxy); 
-        this.router.set('x-powered-by', false);
-        this.router.set('etag', false);
-
-        // calculate response time
-        this.router.use(responseTime({ digits: 0, suffix: false, header: headers.RSPONSE_TIME }));
-
-        // set version header
-        this.router.use((request: express.Request, response: express.Response, next: Function) => {
-            response.set({
-                [headers.SERVER_NAME]: this.name,
-                [headers.API_VERSION]: this.version
-            });
-            next();
-        });
+        // attache the first handler
+        this.router.use(firsthandler(this.name, this.version, options));
 
         // bind express app to the server
         this.webServer.on('request', (request, response) => {
@@ -175,7 +154,7 @@ export class Application extends EventEmitter {
         this.ioServer.use((socket: socketio.Socket, next: Function) => {
             try {
                 // reject new connections if the server is too busy
-                if (toobusy()) throw new TooBusyError();
+                if (toobusy()) throw new nova.TooBusyError();
 
                 // get and parse auth data from handshake
                 const query = socket.handshake.query;
@@ -227,7 +206,12 @@ function validateOptions(options: AppConfig): AppConfig {
     options = Object.assign({}, options);
 
     if (!options.name) throw new TypeError('Cannot create an app: name is undefined');
+    if (typeof options.name !== 'string' || options.name.trim().length === 0)
+        throw new TypeError('Cannot create an app: name must be a non-empty string');
+
     if (!options.version) throw new TypeError('Cannot create an app: version is undefined');
+    if (typeof options.version !== 'string' || options.version.trim().length === 0)
+        throw new TypeError('Cannot create an app: version must be a non-empty string');
 
     return options;
 }
@@ -235,15 +219,15 @@ function validateOptions(options: AppConfig): AppConfig {
 // SOCKET AUTHENTICATOR ACTION
 // =================================================================================================
 interface SocketAuthInputs {
-    authenticator: Authenticator
+    authenticator: nova.Authenticator
 }
 
-function socketAuthAdapter(this: ActionContext, inputs: SocketAuthInputs, authInfo: any): Promise<string> {
+function socketAuthAdapter(this: nova.ActionContext, inputs: SocketAuthInputs, authInfo: any): Promise<string> {
     // convert auth info to the owner string
     return Promise.resolve(inputs.authenticator.toOwner(authInfo));
 }
 
-function authenticateSocket(this: ActionContext, inputs: string): Promise<string> {
+function authenticateSocket(this: nova.ActionContext, inputs: string): Promise<string> {
     // just a pass-through action
     return Promise.resolve(inputs);
 }

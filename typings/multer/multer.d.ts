@@ -2,16 +2,8 @@
 // Project: https://github.com/expressjs/multer
 // Definitions by: jt000 <https://github.com/jt000>, vilicvane <https://vilic.github.io/>, David Broder-Rodgers <https://github.com/DavidBR-SW>
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
-
-/// <reference path="../express/express.d.ts" />
-
-declare namespace Express {
-    export interface Request {
-        file: Multer.File;
-        files: {
-            [fieldname: string]: Multer.File
-        };
-    }
+declare module "multer" {
+    import router = require('router');
 
     namespace Multer {
         export interface File {
@@ -35,10 +27,6 @@ declare namespace Express {
             buffer: Buffer;
         }
     }
-}
-
-declare module "multer" {
-    import express = require('express');
 
     namespace multer {
         interface Field {
@@ -71,30 +59,30 @@ declare module "multer" {
                 headerPairs?: number;
             };
             /** A function to control which files to upload and which to skip. */
-            fileFilter?: (req: Express.Request, file: Express.Multer.File, callback: (error: Error, acceptFile: boolean) => void) => void;
+            fileFilter?: (req: router.Request, file: Multer.File, callback: (error: Error, acceptFile: boolean) => void) => void;
         }
 
         interface StorageEngine {
-            _handleFile(req: express.Request, file: Express.Multer.File, callback: (error?: any, info?: Express.Multer.File) => void): void;
-            _removeFile(req: express.Request, file: Express.Multer.File, callback: (error: Error) => void): void;
+            _handleFile(req: router.Request, file: Multer.File, callback: (error?: any, info?: Multer.File) => void): void;
+            _removeFile(req: router.Request, file: Multer.File, callback: (error: Error) => void): void;
         }
 
         interface DiskStorageOptions {
             /** A function used to determine within which folder the uploaded files should be stored. Defaults to the system's default temporary directory. */
-            destination?: (req: Express.Request, file: Express.Multer.File, callback: (error: Error, destination: string) => void) => void;
+            destination?: (req: router.Request, file: Multer.File, callback: (error: Error, destination: string) => void) => void;
             /** A function used to determine what the file should be named inside the folder. Defaults to a random name with no file extension. */
-            filename?: (req: Express.Request, file: Express.Multer.File, callback: (error: Error, filename: string) => void) => void;
+            filename?: (req: router.Request, file: Multer.File, callback: (error: Error, filename: string) => void) => void;
         }
 
         interface Instance {
             /** Accept a single file with the name fieldname. The single file will be stored in req.file. */
-            single(fieldame: string): express.RequestHandler;
+            single(fieldame: string): router.RequestHandler;
             /** Accept an array of files, all with the name fieldname. Optionally error out if more than maxCount files are uploaded. The array of files will be stored in req.files. */
-            array(fieldame: string, maxCount?: number): express.RequestHandler;
+            array(fieldame: string, maxCount?: number): router.RequestHandler;
             /** Accept a mix of files, specified by fields. An object with arrays of files will be stored in req.files. */
-            fields(fields: Field[]): express.RequestHandler;
+            fields(fields: Field[]): router.RequestHandler;
             /** Accepts all files that comes over the wire. An array of files will be stored in req.files. */
-            any(): express.RequestHandler;
+            any(): router.RequestHandler;
         }
     }
 
