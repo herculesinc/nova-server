@@ -8,25 +8,13 @@
     "node/node.d.ts": {
       "commit": "7d6547a8a0c3f35ce5de82ba58bfd143c0d20fab"
     },
-    "express/express.d.ts": {
-      "commit": "95eb7b2527a28281cdbf480c0560744bc5190465"
-    },
     "multer/multer.d.ts": {
-      "commit": "95eb7b2527a28281cdbf480c0560744bc5190465"
-    },
-    "serve-static/serve-static.d.ts": {
       "commit": "95eb7b2527a28281cdbf480c0560744bc5190465"
     },
     "mime/mime.d.ts": {
       "commit": "95eb7b2527a28281cdbf480c0560744bc5190465"
     },
-    "express-serve-static-core/express-serve-static-core.d.ts": {
-      "commit": "95eb7b2527a28281cdbf480c0560744bc5190465"
-    },
     "body-parser/body-parser.d.ts": {
-      "commit": "95eb7b2527a28281cdbf480c0560744bc5190465"
-    },
-    "response-time/response-time.d.ts": {
       "commit": "95eb7b2527a28281cdbf480c0560744bc5190465"
     },
     "socket.io/socket.io.d.ts": {
@@ -35,26 +23,29 @@
     "on-finished/on-finished.d.ts": {
       "commit": "7d6547a8a0c3f35ce5de82ba58bfd143c0d20fab"
     },
-    "mocha/mocha.d.ts": {
-      "commit": "c6c068935a58aa58087a309740bcf933600140b8"
-    },
-    "supertest/supertest.d.ts": {
-      "commit": "c6c068935a58aa58087a309740bcf933600140b8"
-    },
-    "sinon/sinon.d.ts": {
-      "commit": "c6c068935a58aa58087a309740bcf933600140b8"
-    },
-    "superagent/superagent.d.ts": {
-      "commit": "c6c068935a58aa58087a309740bcf933600140b8"
+    "on-headers/on-headers.d.ts": {
+      "commit": "7d6547a8a0c3f35ce5de82ba58bfd143c0d20fab"
     },
     "chai/chai.d.ts": {
-      "commit": "c6c068935a58aa58087a309740bcf933600140b8"
+      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
     },
     "assertion-error/assertion-error.d.ts": {
-      "commit": "c6c068935a58aa58087a309740bcf933600140b8"
+      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+    },
+    "sinon/sinon.d.ts": {
+      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
     },
     "socket.io-client/socket.io-client.d.ts": {
-      "commit": "07378f4a20ef709de8aea9507144fcf48c38897d"
+      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+    },
+    "mocha/mocha.d.ts": {
+      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+    },
+    "supertest/supertest.d.ts": {
+      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+    },
+    "superagent/superagent.d.ts": {
+      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
     }
   }
 }

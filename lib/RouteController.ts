@@ -1,10 +1,12 @@
 // IMPORTS
 // =================================================================================================
-import { 
+import {
     Action, ActionAdapter, Executor, ExecutorContext, ExecutionOptions, AuthInputs, RateOptions,
     DaoOptions, HttpStatusCode, Exception, validate, TooBusyError, UnsupportedMethodError
 } from 'nova-base';
-import { Application as ExpressApp, RequestHandler, Request, Response } from 'express';
+import { Router, RequestHandler, Request, Response } from 'router';
+import * as accepts from 'accepts';
+import * as typeIs from 'type-is';
 import * as bodyParser from 'body-parser';
 import * as multer from 'multer';
 import * as toobusy from 'toobusy-js';
@@ -18,12 +20,12 @@ const DEFAULT_JSON_PARSER: RequestHandler = bodyParser.json();
 
 const BODY_TYPE_CHECKERS = {
     json: function(request: Request, response: Response, next: Function) {
-        return !request.headers['content-type'] || request.is('json') !== false
+        return !request.headers['content-type'] || typeIs(request, ['json']) !== false
             ? next()
             : next(new Exception(`Only JSON body is supported for this request`, HttpStatusCode.UnsupportedContent));
     },
     files: function(request: Request, response: Response, next: Function) {
-        return request.is('multipart')
+        return typeIs(request, ['multipart'])
             ? next()
             : next(new Exception(`Only multipart body is supported for this request`, HttpStatusCode.UnsupportedContent));
     }
@@ -31,10 +33,11 @@ const BODY_TYPE_CHECKERS = {
 
 const ACCPET_TYPE_CHECKER = {
     json: function(request: Request, response: Response, next: Function) {
-        return request.accepts('json')
+        const checker = accepts(request);
+        return checker.type(['json'])
             ? next()
             : next(new Exception(`Only JSON response can be returned from this endpoint`, HttpStatusCode.NotAcceptable));
-    } 
+    }
 };
 
 // INTERFACES
@@ -85,9 +88,13 @@ export interface ViewBuilder<T> {
     (result: T, options?: any): any;
 }
 
+export interface ViewOptionsBuilder {
+    (inputs: any, result: any, requestor: string): any;
+}
+
 export interface ResponseOptions<T> {
     view        : ViewBuilder<T>,
-    options?    : any;
+    options?    : ViewOptionsBuilder | any;
 }
 
 interface CorsOptions {
@@ -100,35 +107,47 @@ interface CorsOptions {
 // CLASS DEFINITION
 // =================================================================================================
 export class RouteController {
-    
+
     name    : string;
     root    : string;
     context : ExecutorContext;
     routes  : Map<string, RouteConfig>;
-    
+
     // CONSTRUCTOR
     // --------------------------------------------------------------------------------------------
     constructor(name?: string) {
         this.name = name;
         this.routes = new Map<string, RouteConfig>();
     }
-    
+
     // PUBLIC METHODS
     // --------------------------------------------------------------------------------------------
     set(path: string, config: RouteConfig) {
-        if (!path) throw new Error('Path cannot be undefined');
-        if (!config) throw new Error('Route configuration cannot be undefined');
+        // check path parameter
+        if (!path) throw new TypeError(`Route path '${path}' is not valid`);
+        if (typeof path !== 'string') throw new TypeError(`Route path must be a string`);
+        if (path.charAt(0) === '/')
+            path = path.substring(1);
         if (this.routes.has(path))
-            throw new Error(`Path {${path}} has already been bound to a handler`);
+            throw new Error(`Route path {${path}} has already been bound to a handler`);
+
+        // check config parameter
+        if (!config) throw new TypeError('Route configuration cannot be undefined');
+
+        // register the route
         this.routes.set(path, config);
     }
 
-    attach(root: string, router: ExpressApp, context: ExecutorContext) {
-        // check if the controller has already been attached
-        if (this.root) throw new Error(`Controller has alread been bound to ${this.root} root`);
+    attach(root: string, router: Router, context: ExecutorContext) {
+        // check if the controller can be attached to this root
+        if (!root) throw new TypeError(`Cannot attach route controller to '${root}' root`);
+        if (typeof root !== 'string') throw new TypeError(`Route controller root must be a string`);
+        if (this.root) throw new TypeError(`Route controller has alread been bound to '${this.root}'`);
+
+        if (!context) throw new TypeError(`Route controller cannot be attached to an undefined context`);
 
         // initialize controller variables
-        this.root = root;
+        this.root = (root.charAt(root.length - 1) !== '/') ? root + '/' : root;
         this.context = context;
 
         // get the logger from context
@@ -137,20 +156,21 @@ export class RouteController {
         // attach route handlers to the router
         for (let [subpath, config] of this.routes) {
             const methods = ['OPTIONS'];
-            const fullpath = joinUrl(this.root, subpath);
+            const route = router.route(this.root + subpath);
             const corsOptions: CorsOptions = Object.assign({}, defaults.CORS, config.cors);
 
-            router.all(this.root, function(request: Request, response: Response, next: Function) {
+            route.all(function(request: Request, response: Response, next: Function) {
                 // add CORS response headers for all requests
-                response.header('Access-Control-Allow-Methods', allowedMethods);
-                response.header('Access-Control-Allow-Origin', corsOptions.origin);
-                response.header('Access-Control-Allow-Headers', allowedHeaders);
-                response.header('Access-Control-Allow-Credentials', corsOptions.credentials);
-                response.header('Access-Control-Max-Age', corsOptions.maxAge);
-                
+                response.setHeader('Access-Control-Allow-Methods', allowedMethods);
+                response.setHeader('Access-Control-Allow-Origin', corsOptions.origin);
+                response.setHeader('Access-Control-Allow-Headers', allowedHeaders);
+                response.setHeader('Access-Control-Allow-Credentials', corsOptions.credentials);
+                response.setHeader('Access-Control-Max-Age', corsOptions.maxAge);
+
                 if (request.method === 'OPTIONS') {
                     // immediately end OPTION requests
-                    response.sendStatus(HttpStatusCode.OK);
+                    response.statusCode = HttpStatusCode.OK;
+                    response.end();
                 }
                 else {
                     // log the request
@@ -162,27 +182,27 @@ export class RouteController {
             });
 
             if (config.get) {
-                router.get(fullpath, ...this.buildEndpointHandlers(config.get, true));
+                route.get(...this.buildEndpointHandlers(config.get, true));
                 methods.push('GET');
             }
 
             if (config.post) {
-                router.post(fullpath, ...this.buildEndpointHandlers(config.post));
+                route.post(...this.buildEndpointHandlers(config.post));
                 methods.push('POST');
             }
 
             if (config.put) {
-                router.put(fullpath, ...this.buildEndpointHandlers(config.put));
+                route.put(...this.buildEndpointHandlers(config.put));
                 methods.push('PUT');
             }
 
             if (config.patch) {
-                router.patch(fullpath, ...this.buildEndpointHandlers(config.patch));
+                route.patch(...this.buildEndpointHandlers(config.patch));
                 methods.push('PATCH');
             }
 
             if (config.delete) {
-                router.delete(fullpath, ...this.buildEndpointHandlers(config.delete));
+                route.delete(...this.buildEndpointHandlers(config.delete));
                 methods.push('DELETE');
             }
 
@@ -191,7 +211,7 @@ export class RouteController {
             var allowedHeaders = corsOptions.headers.join(',');
 
             // catch unsupported method requests
-            router.all(this.root, function(request: Request, response: Response, next: Function) {
+            route.all(function(request: Request, response: Response, next: Function) {
                 next(new UnsupportedMethodError(request.method, request.path));
             });
         }
@@ -207,7 +227,7 @@ export class RouteController {
 
         // make sure transactions are started for non-readonly handlers
         const options: ExecutionOptions = {
-            daoOptions  : Object.assign({ startTransaction: !readonly }, config.dao ),
+            daoOptions  : Object.assign({ startTransaction: !readonly }, config.dao),
             rateLimits  : config.rate,
             authOptions : config.auth
         };
@@ -223,10 +243,8 @@ export class RouteController {
         // build endpoint handler
         handlers.push(async function(request: Request, response: Response, next: Function) {
             try {
-                // TODO: convert to regular (not asnyc) function
-
                 // build inputs object
-                const inputs = config.body && config.body.type === 'files' 
+                const inputs = config.body && config.body.type === 'files'
                     ? Object.assign({}, config.defaults, request.query, request.params, { files: request.files })
                     : Object.assign({}, config.defaults, request.query, request.params, request.body)
 
@@ -236,7 +254,7 @@ export class RouteController {
 
                 // check authorization header
                 let requestor: AuthInputs | string;
-                const authHeader = request.headers['authorization'];
+                const authHeader = request.headers['authorization'] || request.headers['Authorization'];
                 if (authHeader) {
                     // if header is present, build auth inputs
                     requestor = parseAuthHeader(authHeader);
@@ -251,23 +269,27 @@ export class RouteController {
 
                 // build response
                 if (config.response) {
-                    const view = typeof config.response === 'function'
-                        ? config.response(result)
-                        : config.response.view(result, config.response.options);
-                    if (!view) throw new Exception('Resource not found', HttpStatusCode.NotFound);
-                    switch (typeof view) {
-                        case 'string':
-                        case 'number':
-                        case 'boolean':
-                        case 'function':
-                        case 'symbol':
-                            throw new Exception(`View for ${request.method} ${request.path} returned invalid value`);                        
+                    let view: any;
+                    if (typeof config.response === 'function') {
+                        view = config.response(result);
+                    }
+                    else {
+                        const viewBuilderOptions = (typeof config.response.options === 'function')
+                            ? config.response.options(inputs, result, requestor)
+                            : config.response.options;
+                        view = config.response.view(result, viewBuilderOptions);
                     }
 
-                    response.json(view);
+                    if (!view) throw new Exception('Resource not found', HttpStatusCode.NotFound);
+                    if (typeof view !== 'object') throw new Exception(`View for ${request.method} ${request.path} returned invalid value`);
+
+                    response.statusCode = HttpStatusCode.OK;
+                    response.setHeader('Content-Type', 'application/json; charset=utf-8');
+                    response.end(JSON.stringify(view), 'utf8')
                 }
                 else {
-                    response.sendStatus(HttpStatusCode.NoContent);
+                    response.statusCode = HttpStatusCode.NoContent;
+                    response.end();
                 }
             }
             catch (error) {
@@ -282,18 +304,6 @@ export class RouteController {
 
 // HELPER FUNCTIONS
 // =================================================================================================
-function joinUrl(root: string, subpath: string): string {
-    if (root.charAt(root.length - 1) !== '/') {
-        root = root + '/';
-    }
-
-    if (subpath.charAt(0) === '/') {
-        subpath = subpath.substring(1);
-    }
-
-    return root + subpath;
-}
-
 function getTypeCheckers(config: JsonBodyOptions | FileBodyOptions, expectsResponse: boolean): RequestHandler[] {
     const checkers = [];
 
@@ -305,9 +315,9 @@ function getTypeCheckers(config: JsonBodyOptions | FileBodyOptions, expectsRespo
         checkers.push(BODY_TYPE_CHECKERS.files);
     }
     else {
-        throw new Error(`Body type ${config.type} is not supported`);
+        throw new TypeError(`Body type '${config.type}' is not supported`);
     }
-    
+
     // check accepts
     if (expectsResponse) {
         checkers.push(ACCPET_TYPE_CHECKER.json);
@@ -326,22 +336,22 @@ function getBodyParser(config: JsonBodyOptions | FileBodyOptions): RequestHandle
         const fConfig = config as FileBodyOptions;
 
         // validate config object
-        if (typeof fConfig.field !== 'string') throw new Error(`'field' is undefined in file body options`);
-        if (!fConfig.limits) throw new Error(`'limits' are undefined in file body options`);
-        if (typeof fConfig.limits.size !== 'number' || typeof fConfig.limits.count !== 'number') 
-            throw new Error(`'limits' are invalid in file body options`);
+        if (typeof fConfig.field !== 'string') throw new TypeError(`'field' is undefined in file body options`);
+        if (!fConfig.limits) throw new TypeError(`'limits' are undefined in file body options`);
+        if (typeof fConfig.limits.size !== 'number' || typeof fConfig.limits.count !== 'number')
+            throw new TypeError(`'limits' are invalid in file body options`);
 
         // build middleware
         return multer({
             storage: multer.memoryStorage(),
-            limits: { 
-                files   : fConfig.limits.count, 
-                fileSize: fConfig.limits.size 
+            limits: {
+                files   : fConfig.limits.count,
+                fileSize: fConfig.limits.size
             }
         }).array(fConfig.field);
     }
     else {
-        throw new Error(`Body type ${config.type} is not supported`);
+        throw new TypeError(`Body type '${config.type}' is not supported`);
     }
 }
 
@@ -360,7 +370,7 @@ function buildExecutorMap<V,T>(config: EndpointConfig<V,T>, context: ExecutorCon
         executorMap.set(undefined, executor);
     }
     else {
-        throw new Error('Cannot create an executor: no endpoint actions provided');
+        throw new TypeError('Cannot create an executor: no endpoint actions provided');
     }
 
     return executorMap;

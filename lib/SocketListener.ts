@@ -2,10 +2,7 @@
 // =================================================================================================
 import * as SocketIO from 'socket.io';
 import * as toobusy from 'toobusy-js'
-import { 
-    Action, ActionAdapter, Executor, ExecutorContext, ExecutionOptions, AuthInputs, RateOptions,
-    DaoOptions, TooBusyError
-} from 'nova-base';
+import * as nova from 'nova-base';
 
 // MODULE VARIABLES
 // =================================================================================================
@@ -16,10 +13,10 @@ const CONNECT_EVENT = 'connection';
 // =================================================================================================
 export interface HandlerConfig<V,T> {
     defaults?       : any;
-    adapter?        : ActionAdapter<V>;
-    action          : Action<V,T>;
-    rate?           : RateOptions;
-    dao?            : DaoOptions;
+    adapter?        : nova.ActionAdapter<V>;
+    action          : nova.Action<V,T>;
+    rate?           : nova.RateOptions;
+    dao?            : nova.DaoOptions;
     auth?           : any;
 }
 
@@ -33,7 +30,7 @@ export class SocketListener {
 
     name?       : string;
     topic       : string;
-    context     : ExecutorContext;
+    context     : nova.ExecutorContext;
     handlers    : Map<string, HandlerConfig<any,any>>;
 
     // CONSTRUCTOR
@@ -46,16 +43,26 @@ export class SocketListener {
     // PUBLIC METHODS
     // --------------------------------------------------------------------------------------------
     on<V,T>(event: string, config: HandlerConfig<V,T>) {
-        if (!event) throw new Error('Event cannot be undefined');
-        if (!config) throw new Error('Handler configuration cannot be undefined');
+        // check event parameter
+        if (!event) throw new TypeError(`Socket event '${event}' is invalid`);
+        if (typeof event !== 'string') throw new TypeError('Socket event must be a string');
         if (this.handlers.has(event))
-            throw new Error(`Event {${event}} has already been bound to a handler`);
+            throw new Error(`Socket Event {${event}} has already been bound to a handler`);
+
+        // check config parameter
+        if (!config) throw new TypeError('Socket event handler configuration cannot be undefined');
+
+        // register the event
         this.handlers.set(event, config);
     }
 
-    attach(topic: string, io: SocketIO.Server, context: ExecutorContext, onerror: (error: Error) => void) {
-        // check if the listener has already been attached
-        if (this.topic) throw new Error(`Listener has alread been bound to ${this.topic} topic`);
+    attach(topic: string, io: SocketIO.Server, context: nova.ExecutorContext, onerror: (error: Error) => void) {
+        // check if the listener can be bound to this topic
+        if (!topic) throw new TypeError(`Cannot attach socket listener to '${topic}' topic`);
+        if (typeof topic !== 'string') throw new TypeError(`Socket listener topic must be a string`);
+        if (this.topic) throw new Error(`Socket listener has alread been bound to '${this.topic}' topic`);
+
+        if (!context) throw new TypeError(`Socket listener cannot be attached to an undefined context`);
 
         // initialize listener variables
         this.topic = topic;
@@ -63,7 +70,6 @@ export class SocketListener {
 
         // attach event handlers to the socket
         io.of(topic).on(CONNECT_EVENT, (socket) => {
-            // attach event handlers handlers
             for (let [event, config] of this.handlers) {
                 socket.on(event, this.buildEventHandler(config, socket, onerror));
             }
@@ -76,28 +82,28 @@ export class SocketListener {
         if (!config || !socket) return;
 
         // build execution options
-        const options: ExecutionOptions = {
+        const options: nova.ExecutionOptions = {
             daoOptions  : Object.assign({ startTransaction: false }, config.dao),
             rateLimits  : config.rate,
             authOptions : config.auth
         };
 
         // build executor
-        const executor = new Executor(this.context, config.action, config.adapter, options);
+        const executor = new nova.Executor(this.context, config.action, config.adapter, options);
 
         // build and return the handler
         return function(data: any, callback: (response) => void) {
 
             // check if the server is too busy
             if (toobusy()) {
-                const error = new TooBusyError();
+                const error = new nova.TooBusyError();
                 setImmediate(onerror, error);
                 return callback(error);
             }
-            
+
             // build inputs and run the executor
-            const inputs = Object.assign({}, config.defaults, data); 
-            const authInputs: AuthInputs = socket[symSocketAuthInputs];
+            const inputs = Object.assign({}, config.defaults, data);
+            const authInputs: nova.AuthInputs = socket[symSocketAuthInputs];
             executor.execute(inputs, authInputs)
                 .then((result) => callback(undefined))
                 .catch((error) => {

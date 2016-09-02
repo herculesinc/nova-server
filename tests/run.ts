@@ -17,12 +17,17 @@ import { MockRateLimiter } from './mocks/RateLimiter';
 
 // PERPARATIONS
 // =================================================================================================
-const router = new RouteController();
-router.set('/', {
+const controller = new RouteController();
+controller.set('/', {
     get: {
         adapter     : adapters.helloWorldAdapter,
         action      : actions.helloWorldAction,
-        response    : views.generateHelloWorldView
+        response: {
+            view    : views.generateHelloWorldView,
+            options : function(inputs: any, result: any) {
+                console.log('in view option builder');
+            } 
+        } 
     }
 });
 
@@ -51,7 +56,7 @@ const app = createApp({
 });
 
 // attach routers
-app.register('/', router);
+app.register('/', controller);
 app.register('/', listener);
 
 // start the server

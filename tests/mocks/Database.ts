@@ -33,7 +33,7 @@ export class MockDao implements Dao {
         return Promise.resolve(user);
     }
 
-    release(action?: 'commit' | 'rollback'): Promise<any> {
+    close(action?: 'commit' | 'rollback'): Promise<any> {
         this.inTransaction = false;
         this.isActive = false;
         return Promise.resolve();
