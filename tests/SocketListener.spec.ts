@@ -19,7 +19,8 @@ let appConfig: AppConfig;
 let listenerConfig: HandlerConfig<any, any>;
 
 const daoOptions: DaoOptions = { startTransaction: true };
-const authResult: any = { results: 'auth results' };
+const requester: any = { id: '12345', name: 'user' };
+const toOwnerResult: string = requester.id;
 const actionResult: any = { results: 'action results' };
 const adapterResult: any = { results: 'adapter results' };
 const authOptions: any = { isRequired: false };
@@ -41,9 +42,9 @@ describe('NOVA-SERVER -> SocketListener;', () => {
         dao = new MockDao(daoOptions);
         database = { connect: sinon.stub().returns(Promise.resolve(dao)) };
         authenticator = {
-            decode      : undefined, // TODO: set to something
-            authenticate: sinon.stub().returns(Promise.resolve(authResult)),
-            toOwner     : sinon.stub().returns(authToken)
+            decode      : sinon.stub().returns(requester),
+            toOwner     : sinon.stub().returns(toOwnerResult),
+            authenticate: sinon.stub().returns(Promise.resolve(requester))
         };
     });
 
@@ -77,6 +78,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
         });
 
         afterEach(done => {
+            socketClient.off('connect');
             socketClient.off('error');
             app.webServer.close();
             done();
@@ -86,15 +88,23 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             expect(socketClient.connected).to.be.true;
         });
 
-        it('authenticator should be called once', () => {
-            expect((authenticator as any).calledOnce).to.be.true;
+        it('authenticator.decode should be called once', () => {
+            expect((authenticator.decode as any).calledOnce).to.be.true;
         });
 
-        it('authenticator should be called with right arguments', () => {
-            expect((authenticator as any).firstCall.calledWithExactly({
+        it('authenticator.decode should be called with right arguments', () => {
+            expect((authenticator.decode as any).firstCall.calledWithExactly({
                 scheme     : 'token',
                 credentials: authToken
-            }, undefined)).to.be.true;
+            })).to.be.true;
+        });
+
+        it('authenticator.authenticate should be called once', () => {
+            expect((authenticator.authenticate as any).calledOnce).to.be.true;
+        });
+
+        it('authenticator.authenticate should be called with right arguments', () => {
+            expect((authenticator.authenticate as any).firstCall.calledWithExactly(requester, undefined)).to.be.true;
         });
 
         it('authenticator.toOwner should be called once', () => {
@@ -102,7 +112,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
         });
 
         it('authenticator.toOwner should be called with right arguments', () => {
-            expect((authenticator.toOwner as any).firstCall.calledWithExactly(authResult)).to.be.true;
+            expect((authenticator.toOwner as any).firstCall.calledWithExactly(requester)).to.be.true;
         });
 
         it('action should not be called', () => {
@@ -156,20 +166,29 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             afterEach(done => {
+                socketClient.off('connect');
                 socketClient.off('error');
                 app.webServer.close();
                 done();
             });
 
-            it('authenticator should be called twice', () => {
-                expect((authenticator as any).calledTwice).to.be.true;
+            it('authenticator.decode should be called once', () => {
+                expect((authenticator.decode as any).calledOnce).to.be.true;
             });
 
-            it('authenticator should be always called with right arguments', () => {
-                expect((authenticator as any).alwaysCalledWithExactly({
+            it('authenticator.decode should be called with right arguments', () => {
+                expect((authenticator.decode as any).firstCall.calledWithExactly({
                     scheme     : 'token',
                     credentials: authToken
-                }, undefined)).to.be.true;
+                })).to.be.true;
+            });
+
+            it('authenticator.authenticate should be called twice', () => {
+                expect((authenticator.authenticate as any).calledTwice).to.be.true;
+            });
+
+            it('authenticator.authenticate should be always called with right arguments', () => {
+                expect((authenticator.authenticate as any).alwaysCalledWithExactly(requester, undefined)).to.be.true;
             });
 
             it('authenticator.toOwner should be called once', () => {
@@ -177,7 +196,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             it('authenticator.toOwner should be called with right arguments', () => {
-                expect((authenticator.toOwner as any).firstCall.calledWithExactly(authResult)).to.be.true;
+                expect((authenticator.toOwner as any).firstCall.calledWithExactly(requester)).to.be.true;
             });
 
             it('adapter should be called once', () => {
@@ -185,7 +204,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             it('adapter should be called with right arguments', () => {
-                expect((listenerConfig.adapter as any).firstCall.calledWithExactly(payload, authResult)).to.be.true;
+                expect((listenerConfig.adapter as any).firstCall.calledWithExactly(payload, requester)).to.be.true;
             });
 
             it('action should be called once', () => {
@@ -226,20 +245,29 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             afterEach(done => {
+                socketClient.off('connect');
                 socketClient.off('error');
                 app.webServer.close();
                 done();
             });
 
-            it('authenticator should be called twice', () => {
-                expect((authenticator as any).calledTwice).to.be.true;
+            it('authenticator.decode should be called once', () => {
+                expect((authenticator.decode as any).calledOnce).to.be.true;
             });
 
-            it('authenticator should be always called with right arguments', () => {
-                expect((authenticator as any).alwaysCalledWithExactly({
+            it('authenticator.decode should be called with right arguments', () => {
+                expect((authenticator.decode as any).firstCall.calledWithExactly({
                     scheme     : 'token',
                     credentials: authToken
-                }, undefined)).to.be.true;
+                })).to.be.true;
+            });
+
+            it('authenticator.authenticate should be called twice', () => {
+                expect((authenticator.authenticate as any).calledTwice).to.be.true;
+            });
+
+            it('authenticator.authenticate should be always called with right arguments', () => {
+                expect((authenticator.authenticate as any).alwaysCalledWithExactly(requester, undefined)).to.be.true;
             });
 
             it('authenticator.toOwner should be called once', () => {
@@ -247,7 +275,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             it('authenticator.toOwner should be called with right arguments', () => {
-                expect((authenticator.toOwner as any).firstCall.calledWithExactly(authResult)).to.be.true;
+                expect((authenticator.toOwner as any).firstCall.calledWithExactly(requester)).to.be.true;
             });
 
             it('adapter should be called once', () => {
@@ -255,7 +283,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             it('adapter should be called with right arguments', () => {
-                expect((listenerConfig.adapter as any).firstCall.calledWithExactly({}, authResult)).to.be.true;
+                expect((listenerConfig.adapter as any).firstCall.calledWithExactly({}, requester)).to.be.true;
             });
 
             it('action should be called once', () => {
@@ -297,27 +325,33 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             afterEach(done => {
+                socketClient.off('connect');
                 socketClient.off('error');
                 app.webServer.close();
                 done();
             });
 
-            it('authenticator should be called twice', () => {
-                expect((authenticator as any).calledTwice).to.be.true;
+            it('authenticator.decode should be called once', () => {
+                expect((authenticator.decode as any).calledOnce).to.be.true;
             });
 
-            it('authenticator should be always called with right arguments first time', () => {
-                expect((authenticator as any).firstCall.calledWithExactly({
+            it('authenticator.decode should be called with right arguments', () => {
+                expect((authenticator.decode as any).firstCall.calledWithExactly({
                     scheme     : 'token',
                     credentials: authToken
-                }, undefined)).to.be.true;
+                })).to.be.true;
             });
 
-            it('authenticator should be always called with right arguments second time', () => {
-                expect((authenticator as any).secondCall.calledWithExactly({
-                    scheme     : 'token',
-                    credentials: authToken
-                }, authOptions)).to.be.true;
+            it('authenticator.authenticate should be called twice', () => {
+                expect((authenticator.authenticate as any).calledTwice).to.be.true;
+            });
+
+            it('authenticator.authenticate should be called with right arguments first time', () => {
+                expect((authenticator.authenticate as any).firstCall.calledWithExactly(requester, undefined)).to.be.true;
+            });
+
+            it('authenticator.authenticate should be called with right arguments second time', () => {
+                expect((authenticator.authenticate as any).secondCall.calledWithExactly(requester, authOptions)).to.be.true;
             });
 
             it('authenticator.toOwner should be called once', () => {
@@ -325,11 +359,11 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             it('authenticator.toOwner should be called with right arguments', () => {
-                expect((authenticator.toOwner as any).firstCall.calledWithExactly(authResult)).to.be.true;
+                expect((authenticator.toOwner as any).firstCall.calledWithExactly(requester)).to.be.true;
             });
 
             it('adapter should be called with right arguments', () => {
-                expect((listenerConfig.adapter as any).firstCall.calledWithExactly({}, authResult)).to.be.true;
+                expect((listenerConfig.adapter as any).firstCall.calledWithExactly({}, requester)).to.be.true;
             });
 
             it('action should be called with right arguments', () => {
@@ -367,6 +401,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             afterEach(done => {
+                socketClient.off('connect');
                 socketClient.off('error');
                 app.webServer.close();
                 done();
@@ -412,6 +447,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             afterEach(done => {
+                socketClient.off('connect');
                 socketClient.off('error');
                 app.webServer.close();
                 done();
@@ -501,16 +537,12 @@ describe('NOVA-SERVER -> SocketListener;', () => {
 
         describe('if authenticator was rejected;', () => {
             beforeEach(() => {
-                authenticator = { 
-                    decode      : undefined, // TODO: set to something
-                    authenticate: function () {
-                        try {
-                            validate.authorized(false, 'Invalid token');
-                        } catch (e) {
-                            return Promise.reject(e);
-                        }
-                    },
-                    toOwner     : sinon.stub().returns(authToken)
+                authenticator.authenticate = function () {
+                    try {
+                        validate.authorized(false, 'Invalid token');
+                    } catch (e) {
+                        return Promise.reject(e);
+                    }
                 };
 
                 appConfig.authenticator = authenticator;
@@ -575,11 +607,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
 
         describe('if authenticator return error;', () => {
             beforeEach(() => {
-                authenticator = { 
-                    decode      : undefined, // TODO: set to something
-                    authenticate: sinon.stub().throws('TypeError'),
-                    toOwner     : sinon.stub().returns(authToken)
-                };
+                authenticator.authenticate = sinon.stub().throws('TypeError');
 
                 appConfig.authenticator = authenticator;
 
