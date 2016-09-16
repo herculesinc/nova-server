@@ -102,11 +102,12 @@ class Application extends events.EventEmitter {
                 // get and parse auth data from handshake
                 const query = socket.handshake.query;
                 const authInputs = util_1.parseAuthHeader(query['authorization'] || query['Authorization']);
+                const authData = this.authExecutor.authenticator.decode(authInputs);
                 // run authentication executor and mark socket as authenticated
-                this.authExecutor.execute({ authenticator: this.context.authenticator }, authInputs)
+                this.authExecutor.execute({ authenticator: this.context.authenticator }, authData)
                     .then((socketOwnerId) => {
                     socket.join(socketOwnerId, function () {
-                        socket[SocketListener_1.symSocketAuthInputs] = authInputs;
+                        socket[SocketListener_1.symSocketAuthData] = authData;
                         next();
                     });
                 })

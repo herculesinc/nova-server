@@ -6,7 +6,7 @@ import * as nova from 'nova-base';
 
 // MODULE VARIABLES
 // =================================================================================================
-export const symSocketAuthInputs = Symbol();
+export const symSocketAuthData = Symbol();
 const CONNECT_EVENT = 'connection';
 
 // INTERFACES
@@ -103,8 +103,8 @@ export class SocketListener {
 
             // build inputs and run the executor
             const inputs = Object.assign({}, config.defaults, data);
-            const authInputs: nova.AuthInputs = socket[symSocketAuthInputs];
-            executor.execute(inputs, authInputs)
+            const authData = socket[symSocketAuthData];
+            executor.execute(inputs, authData)
                 .then((result) => callback(undefined))
                 .catch((error) => {
                     setImmediate(onerror, error);

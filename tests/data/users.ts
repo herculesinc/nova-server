@@ -2,7 +2,7 @@
 // ================================================================================================
 export interface User {
     id      : string;
-    token   : string;
+    password: string;
     name    : string;
 }
 
@@ -11,17 +11,17 @@ export interface User {
 export const users = [
     {
         id      : '123',
-        token   : 'token1',
+        password: 'password1',
         name    : 'User1'
     },
     {
         id      : '456',
-        token   : 'token2',
+        password: 'password2',
         name    : 'User2'
     },
     {
         id      : '789',
-        token   : 'token3',
+        password: 'password3',
         name    : 'User3'
     },
 ];

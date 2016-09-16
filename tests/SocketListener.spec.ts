@@ -10,7 +10,7 @@ import { MockDao } from './mocks/Database';
 
 let app: Application;
 let listener: SocketListener;
-let authenticator: Authenticator;
+let authenticator: Authenticator<any,any>;
 let dao: Dao;
 let database: Database;
 
@@ -40,8 +40,11 @@ describe('NOVA-SERVER -> SocketListener;', () => {
     beforeEach(() => {
         dao = new MockDao(daoOptions);
         database = { connect: sinon.stub().returns(Promise.resolve(dao)) };
-        authenticator = sinon.stub().returns(Promise.resolve(authResult));
-        authenticator.toOwner = sinon.stub().returns(authToken);
+        authenticator = {
+            decode      : undefined, // TODO: set to something
+            authenticate: sinon.stub().returns(Promise.resolve(authResult)),
+            toOwner     : sinon.stub().returns(authToken)
+        };
     });
 
     describe('should create socket listener and connect client;', () => {
@@ -498,15 +501,17 @@ describe('NOVA-SERVER -> SocketListener;', () => {
 
         describe('if authenticator was rejected;', () => {
             beforeEach(() => {
-                authenticator = function () {
-                    try {
-                        validate.authorized(false, 'Invalid token');
-                    } catch (e) {
-                        return Promise.reject(e);
-                    }
+                authenticator = { 
+                    decode      : undefined, // TODO: set to something
+                    authenticate: function () {
+                        try {
+                            validate.authorized(false, 'Invalid token');
+                        } catch (e) {
+                            return Promise.reject(e);
+                        }
+                    },
+                    toOwner     : sinon.stub().returns(authToken)
                 };
-
-                authenticator.toOwner = sinon.stub().returns(authToken);
 
                 appConfig.authenticator = authenticator;
 
@@ -570,8 +575,11 @@ describe('NOVA-SERVER -> SocketListener;', () => {
 
         describe('if authenticator return error;', () => {
             beforeEach(() => {
-                authenticator = sinon.stub().throws('TypeError');
-                authenticator.toOwner = sinon.stub().returns(authToken);
+                authenticator = { 
+                    decode      : undefined, // TODO: set to something
+                    authenticate: sinon.stub().throws('TypeError'),
+                    toOwner     : sinon.stub().returns(authToken)
+                };
 
                 appConfig.authenticator = authenticator;
 

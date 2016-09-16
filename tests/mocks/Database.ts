@@ -28,11 +28,6 @@ export class MockDao implements Dao {
         return Promise.resolve(user);
     }
 
-    fetchUserByToken(token: string): Promise<User> {
-        const user = users.find((user) => user.token === token);
-        return Promise.resolve(user);
-    }
-
     close(action?: 'commit' | 'rollback'): Promise<any> {
         this.inTransaction = false;
         this.isActive = false;

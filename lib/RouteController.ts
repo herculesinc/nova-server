@@ -85,11 +85,11 @@ interface FileBodyOptions extends RequestBodyOptions {
 }
 
 export interface ViewBuilder<T> {
-    (result: T, options?: any): any;
+    (result: T, options?: any, viewer?: string): any;
 }
 
 export interface ViewOptionsBuilder {
-    (inputs: any, result: any, requestor: string): any;
+    (inputs: any, result: any, viewer?: string): any;
 }
 
 export interface ResponseOptions<T> {
@@ -243,6 +243,9 @@ export class RouteController {
         // build endpoint handler
         handlers.push(async function(request: Request, response: Response, next: Function) {
             try {
+                // set up a flag to track whether is is an authenticated request or not
+                let authenticated = false;
+
                 // build inputs object
                 const inputs = config.body && config.body.type === 'files'
                     ? Object.assign({}, config.defaults, request.query, request.params, { files: request.files })
@@ -253,11 +256,14 @@ export class RouteController {
                 validate.inputs(!selector || executor, `No actions found for the specified ${selector}`);
 
                 // check authorization header
-                let requestor: AuthInputs | string;
+                let requestor: any;
                 const authHeader = request.headers['authorization'] || request.headers['Authorization'];
                 if (authHeader) {
-                    // if header is present, build auth inputs
-                    requestor = parseAuthHeader(authHeader);
+                    // if header is present, build and parse auth inputs
+                    const authInputs = parseAuthHeader(authHeader);
+                    validate(executor.authenticator, 'Cannot authenticate: authenticator is undefined');
+                    requestor = executor.authenticator.decode(authInputs);
+                    authenticated = true;                    
                 }
                 else {
                     // otherwise, set requestor to the IP address of the request
@@ -270,14 +276,18 @@ export class RouteController {
                 // build response
                 if (config.response) {
                     let view: any;
+                    let viewer: string = authenticated 
+                        ? executor.authenticator.toOwner(requestor)
+                        : requestor;
+
                     if (typeof config.response === 'function') {
-                        view = config.response(result);
+                        view = config.response(result, undefined, viewer);
                     }
                     else {
                         const viewBuilderOptions = (typeof config.response.options === 'function')
-                            ? config.response.options(inputs, result, requestor)
+                            ? config.response.options(inputs, result, viewer)
                             : config.response.options;
-                        view = config.response.view(result, viewBuilderOptions);
+                        view = config.response.view(result, viewBuilderOptions, viewer);
                     }
 
                     if (!view) throw new Exception('Resource not found', HttpStatusCode.NotFound);

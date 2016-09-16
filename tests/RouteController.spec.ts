@@ -10,7 +10,7 @@ import { MockDao } from './mocks/Database';
 
 let app: Application;
 let router: RouteController;
-let authenticator: Authenticator;
+let authenticator: Authenticator<any,any>;
 let dao: Dao;
 let database: Database;
 
@@ -45,7 +45,11 @@ describe('NOVA-SERVER -> RouteController;', () => {
     beforeEach(() => {
         dao = new MockDao(daoOptions);
         database = { connect: sinon.stub().returns(Promise.resolve(dao)) };
-        authenticator = sinon.stub().returns(Promise.resolve(authResult));
+        authenticator = {
+            decode      : undefined,  // TODO: set to something?
+            authenticate: sinon.stub().returns(Promise.resolve(authResult)),
+            toOwner     : undefined  // TODO: set to something?
+        }
     });
 
     describe('should create different api endpoints;', () => {
@@ -853,12 +857,16 @@ describe('NOVA-SERVER -> RouteController;', () => {
                     name         : 'Test API Server',
                     version      : '0.0.1',
                     database     : database,
-                    authenticator: function () {
-                        try {
-                            validate.authorized(false, 'Invalid token');
-                        } catch (e) {
-                            return Promise.reject(e);
-                        }
+                    authenticator: {
+                        decode      : undefined, // TODO: set to something
+                        authenticate: function() {
+                            try {
+                                validate.authorized(false, 'Invalid token');
+                            } catch (e) {
+                                return Promise.reject(e);
+                            }
+                        },
+                        toOwner     : undefined // TODO: set to something
                     }
                 };
 
@@ -911,7 +919,11 @@ describe('NOVA-SERVER -> RouteController;', () => {
                     name         : 'Test API Server',
                     version      : '0.0.1',
                     database     : database,
-                    authenticator: sinon.stub().throws('TypeError')
+                    authenticator: {
+                        decode      : undefined, // TODO: set to something
+                        authenticate: sinon.stub().throws('TypeError'),
+                        toOwner     : undefined // TODO: set to something
+                    }
                 };
 
                 router = new RouteController();

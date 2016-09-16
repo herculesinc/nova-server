@@ -17,7 +17,7 @@ declare module "nova-server" {
         version         : string;
         webServer?      : WebServerConfig;
         ioServer?       : socketio.ServerOptions;
-        authenticator?  : nova.Authenticator;
+        authenticator?  : nova.Authenticator<any,any>;
         database        : nova.Database;
         cache?          : nova.Cache;
         dispatcher?     : nova.Dispatcher;

@@ -24,8 +24,8 @@ controller.set('/', {
         action      : actions.helloWorldAction,
         response: {
             view    : views.generateHelloWorldView,
-            options : function(inputs: any, result: any) {
-                console.log('in view option builder');
+            options : function(inputs: any, result: any, viewer: string) {
+                console.log(viewer + ': in view option builder');
             } 
         } 
     }

@@ -2,39 +2,52 @@
 // =================================================================================================
 import { AuthInputs, Authenticator, ActionContext, validate } from 'nova-base';
 import { MockDao } from './Database';
-import { User } from './../data/users';
+import { User, users } from './../data/users';
 
 // MODULE VARIABLES
 // =================================================================================================
-const KEY = 'testkey';
+const USER_MAP = {
+    [users[0].id]: users[0],
+    [users[1].id]: users[1],
+    [users[2].id]: users[2],
+};
+
+// INTERFACES
+// =================================================================================================
+export interface Token {
+    userId  : string;
+    password: string;
+}
 
 // AUTHENTICATOR
 // =================================================================================================
-export const authenticator: Authenticator = function(this: ActionContext, inputs: AuthInputs, options: any): Promise<User> {
+export const authenticator: Authenticator<Token, Token> = {
 
-    try {
-        validate.authorized(inputs, 'No auth data provided');
-        if (inputs.scheme === 'token') {
-            return (this.dao as MockDao).fetchUserByToken(inputs.credentials)
-                .then((user) => {
-                    validate.authorized(user, 'Invalid token');
-                    return user;
-                });
+    decode(inputs: AuthInputs): Token {
+        validate.authorized(inputs.scheme === 'token', 'Authentication schema not supported');
+        const parts = inputs.credentials.split('%');
+        validate.authorized(parts.length === 2, 'Invalid token');
+        return {
+            userId  : parts[0],
+            password: parts[1]
         }
-        else if (inputs.scheme === 'key') {
-            validate.authorized(inputs.credentials === KEY, 'Invalid Key');
-            return Promise.resolve();
+    },
+
+    authenticate(this: ActionContext, token: Token, options: any): Promise<Token> {
+        try {
+            validate.authorized(token, 'Token is undefined');
+            const user = USER_MAP[token.userId];
+            validate.authorized(user, 'Invalid user');
+            validate.authorized(token.password === user.password, 'Invalid password');
+            this.logger.debug(`Authenticated ${user.name}`);
+            return Promise.resolve(token);
         }
-        else {
-            validate.authorized(false, `Scheme {${inputs.scheme}} is not supported`);
+        catch (e) {
+            return Promise.reject(e);
         }
-    }
-    catch (e) {
-        return Promise.reject(e);
+    },
+
+    toOwner(token: Token): string {
+        return token.userId;
     }
 }
-
-authenticator.toOwner = function(authResult: User): string {
-    if (!authResult) return undefined;
-    return authResult.id;
-};

@@ -9,7 +9,7 @@ import * as toobusy from 'toobusy-js';
 import * as nova from 'nova-base';
 
 import { RouteController } from './RouteController';
-import { SocketListener, symSocketAuthInputs } from './SocketListener';
+import { SocketListener, symSocketAuthData } from './SocketListener';
 import { SocketNotifier } from './SocketNotifier';
 import { parseAuthHeader } from './util';
 import { firsthandler } from './routing/firsthandler';
@@ -37,7 +37,7 @@ export interface AppConfig {
     version         : string;
     webServer?      : WebServerConfig;
     ioServer?       : socketio.ServerOptions;
-    authenticator?  : nova.Authenticator;
+    authenticator?  : nova.Authenticator<any,any>;
     database        : nova.Database;
     cache?          : nova.Cache;
     dispatcher?     : nova.Dispatcher;
@@ -159,12 +159,13 @@ export class Application extends events.EventEmitter {
                 // get and parse auth data from handshake
                 const query = socket.handshake.query;
                 const authInputs = parseAuthHeader(query['authorization'] || query['Authorization']);
+                const authData = this.authExecutor.authenticator.decode(authInputs);
 
                 // run authentication executor and mark socket as authenticated
-                this.authExecutor.execute({ authenticator: this.context.authenticator }, authInputs)
+                this.authExecutor.execute({ authenticator: this.context.authenticator }, authData)
                     .then((socketOwnerId) => {
                         socket.join(socketOwnerId, function() {
-                            socket[symSocketAuthInputs] = authInputs;
+                            socket[symSocketAuthData] = authData;
                             next();
                         });
                     })
@@ -219,7 +220,7 @@ function validateOptions(options: AppConfig): AppConfig {
 // SOCKET AUTHENTICATOR ACTION
 // =================================================================================================
 interface SocketAuthInputs {
-    authenticator: nova.Authenticator
+    authenticator: nova.Authenticator<any,any>
 }
 
 function socketAuthAdapter(this: nova.ActionContext, inputs: SocketAuthInputs, authInfo: any): Promise<string> {

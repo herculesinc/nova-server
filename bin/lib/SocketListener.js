@@ -3,7 +3,7 @@ const toobusy = require('toobusy-js');
 const nova = require('nova-base');
 // MODULE VARIABLES
 // =================================================================================================
-exports.symSocketAuthInputs = Symbol();
+exports.symSocketAuthData = Symbol();
 const CONNECT_EVENT = 'connection';
 // CLASS DEFINITION
 // =================================================================================================
@@ -73,8 +73,8 @@ class SocketListener {
             }
             // build inputs and run the executor
             const inputs = Object.assign({}, config.defaults, data);
-            const authInputs = socket[exports.symSocketAuthInputs];
-            executor.execute(inputs, authInputs)
+            const authData = socket[exports.symSocketAuthData];
+            executor.execute(inputs, authData)
                 .then((result) => callback(undefined))
                 .catch((error) => {
                 setImmediate(onerror, error);

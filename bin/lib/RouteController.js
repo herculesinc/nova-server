@@ -159,6 +159,8 @@ class RouteController {
         handlers.push(function (request, response, next) {
             return __awaiter(this, void 0, void 0, function* () {
                 try {
+                    // set up a flag to track whether is is an authenticated request or not
+                    let authenticated = false;
                     // build inputs object
                     const inputs = config.body && config.body.type === 'files'
                         ? Object.assign({}, config.defaults, request.query, request.params, { files: request.files })
@@ -170,8 +172,11 @@ class RouteController {
                     let requestor;
                     const authHeader = request.headers['authorization'] || request.headers['Authorization'];
                     if (authHeader) {
-                        // if header is present, build auth inputs
-                        requestor = util_1.parseAuthHeader(authHeader);
+                        // if header is present, build and parse auth inputs
+                        const authInputs = util_1.parseAuthHeader(authHeader);
+                        nova_base_1.validate(executor.authenticator, 'Cannot authenticate: authenticator is undefined');
+                        requestor = executor.authenticator.decode(authInputs);
+                        authenticated = true;
                     }
                     else {
                         // otherwise, set requestor to the IP address of the request
@@ -182,14 +187,17 @@ class RouteController {
                     // build response
                     if (config.response) {
                         let view;
+                        let viewer = authenticated
+                            ? executor.authenticator.toOwner(requestor)
+                            : requestor;
                         if (typeof config.response === 'function') {
-                            view = config.response(result);
+                            view = config.response(result, undefined, viewer);
                         }
                         else {
                             const viewBuilderOptions = (typeof config.response.options === 'function')
-                                ? config.response.options(inputs, result, requestor)
+                                ? config.response.options(inputs, result, viewer)
                                 : config.response.options;
-                            view = config.response.view(result, viewBuilderOptions);
+                            view = config.response.view(result, viewBuilderOptions, viewer);
                         }
                         if (!view)
                             throw new nova_base_1.Exception('Resource not found', 404 /* NotFound */);
