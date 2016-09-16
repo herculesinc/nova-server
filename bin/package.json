@@ -43,9 +43,9 @@
     "chai": "3.5.x",
     "del": "2.2.x",
     "gulp": "3.9.x",
-    "gulp-mocha": "2.2.x",
+    "gulp-mocha": "3.0.x",
     "gulp-util": "3.0.x",
-    "mocha": "2.5.x",
+    "mocha": "3.0.x",
     "sinon": "1.17.x",
     "socket.io-client": "1.4.x",
     "supertest": "1.2.x"
