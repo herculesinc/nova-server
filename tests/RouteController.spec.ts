@@ -21,7 +21,8 @@ let endpointConfig: EndpointConfig<any, any>;
 let fakeRequest: any;
 
 const daoOptions: DaoOptions = { startTransaction: true };
-const authResult: any = { results: 'auth results' };
+const requester: any = { id: '12345', name: 'user' };
+const toOwnerResult: string = requester.id;
 const actionResult: any = { results: 'action results' };
 const adapterResult: any = { results: 'adapter results' };
 const viewResult: any = { results: 'view results' };
@@ -41,15 +42,16 @@ const authOptions: any = { isRequired: false };
 const routeDaoOptions: DaoOptions = { startTransaction: true };
 const authToken: string = 'testAuthToken';
 
+
 describe('NOVA-SERVER -> RouteController;', () => {
     beforeEach(() => {
         dao = new MockDao(daoOptions);
         database = { connect: sinon.stub().returns(Promise.resolve(dao)) };
         authenticator = {
-            decode      : undefined,  // TODO: set to something?
-            authenticate: sinon.stub().returns(Promise.resolve(authResult)),
-            toOwner     : undefined  // TODO: set to something?
-        }
+            decode      : sinon.stub().returns(requester),
+            toOwner     : sinon.stub().returns(toOwnerResult),
+            authenticate: sinon.stub().returns(Promise.resolve(requester))
+        };
     });
 
     describe('should create different api endpoints;', () => {
@@ -278,33 +280,13 @@ describe('NOVA-SERVER -> RouteController;', () => {
                     });
             });
 
-            it('authenticator should not be called', () => {
-                expect((authenticator as any).called).to.be.false;
-            });
+            checkAuthenticatorCalls(false);
 
-            it('adapter should be called once', () => {
-                expect((endpointConfig.adapter as any).calledOnce).to.be.true;
-            });
+            checkAdapterCalls(false);
 
-            it('adapter should be called with right arguments', () => {
-                expect((endpointConfig.adapter as any).firstCall.calledWithExactly(defaultsData, undefined)).to.be.true;
-            });
+            checkActionCalls();
 
-            it('action should be called once', () => {
-                expect((endpointConfig.action as any).calledOnce).to.be.true;
-            });
-
-            it('action should be called with right arguments', () => {
-                expect((endpointConfig.action as any).firstCall.calledWithExactly(adapterResult)).to.be.true;
-            });
-
-            it('response should be called once', () => {
-                expect((endpointConfig.response as any).calledOnce).to.be.true;
-            });
-
-            it('response should be called with right arguments', () => {
-                expect((endpointConfig.response as any).firstCall.calledWithExactly(actionResult)).to.be.true;
-            });
+            checkResponseCalls(false)
         });
 
         describe('when auth token was provided;', () => {
@@ -323,40 +305,13 @@ describe('NOVA-SERVER -> RouteController;', () => {
                     });
             });
 
-            it('authenticator should be called once', () => {
-                expect((authenticator as any).calledOnce).to.be.true;
-            });
+            checkAuthenticatorCalls(true);
 
-            it('authenticator should be called with right arguments', () => {
-                expect((authenticator as any).firstCall.calledWithExactly({
-                    scheme     : 'token',
-                    credentials: authToken
-                }, undefined)).to.be.true;
-            });
+            checkAdapterCalls(true);
 
-            it('adapter should be called once', () => {
-                expect((endpointConfig.adapter as any).calledOnce).to.be.true;
-            });
+            checkActionCalls();
 
-            it('adapter should be called with right arguments', () => {
-                expect((endpointConfig.adapter as any).firstCall.calledWithExactly(defaultsData, authResult)).to.be.true;
-            });
-
-            it('action should be called once', () => {
-                expect((endpointConfig.action as any).calledOnce).to.be.true;
-            });
-
-            it('action should be called with right arguments', () => {
-                expect((endpointConfig.action as any).firstCall.calledWithExactly(adapterResult)).to.be.true;
-            });
-
-            it('response should be called once', () => {
-                expect((endpointConfig.response as any).calledOnce).to.be.true;
-            });
-
-            it('response should be called with right arguments', () => {
-                expect((endpointConfig.response as any).firstCall.calledWithExactly(actionResult)).to.be.true;
-            });
+            checkResponseCalls(true)
         });
 
         describe('when only query was provided;', () => {
@@ -375,35 +330,13 @@ describe('NOVA-SERVER -> RouteController;', () => {
                     });
             });
 
-            it('authenticator should not be called', () => {
-                expect((authenticator as any).called).to.be.false;
-            });
+            checkAuthenticatorCalls(false);
 
-            it('adapter should be called once', () => {
-                expect((endpointConfig.adapter as any).calledOnce).to.be.true;
-            });
+            checkAdapterCalls(false, defaultQuery);
 
-            it('adapter should be called with right arguments', () => {
-                let inputData = Object.assign({}, defaultsData, defaultQuery);
+            checkActionCalls();
 
-                expect((endpointConfig.adapter as any).firstCall.calledWithExactly(inputData, undefined)).to.be.true;
-            });
-
-            it('action should be called once', () => {
-                expect((endpointConfig.action as any).calledOnce).to.be.true;
-            });
-
-            it('action should be called with right arguments', () => {
-                expect((endpointConfig.action as any).firstCall.calledWithExactly(adapterResult)).to.be.true;
-            });
-
-            it('response should be called once', () => {
-                expect((endpointConfig.response as any).calledOnce).to.be.true;
-            });
-
-            it('response should be called with right arguments', () => {
-                expect((endpointConfig.response as any).firstCall.calledWithExactly(actionResult)).to.be.true;
-            });
+            checkResponseCalls(false);
         });
 
         describe('when auth token and query was provided;', () => {
@@ -423,42 +356,13 @@ describe('NOVA-SERVER -> RouteController;', () => {
                     });
             });
 
-            it('authenticator should be called once', () => {
-                expect((authenticator as any).calledOnce).to.be.true;
-            });
+            checkAuthenticatorCalls(true);
 
-            it('authenticator should be called with right arguments', () => {
-                expect((authenticator as any).firstCall.calledWithExactly({
-                    scheme     : 'token',
-                    credentials: authToken
-                }, undefined)).to.be.true;
-            });
+            checkAdapterCalls(true, defaultQuery);
 
-            it('adapter should be called once', () => {
-                expect((endpointConfig.adapter as any).calledOnce).to.be.true;
-            });
+            checkActionCalls();
 
-            it('adapter should be called with right arguments', () => {
-                let inputData = Object.assign({}, defaultsData, defaultQuery);
-
-                expect((endpointConfig.adapter as any).firstCall.calledWithExactly(inputData, authResult)).to.be.true;
-            });
-
-            it('action should be called once', () => {
-                expect((endpointConfig.action as any).calledOnce).to.be.true;
-            });
-
-            it('action should be called with right arguments', () => {
-                expect((endpointConfig.action as any).firstCall.calledWithExactly(adapterResult)).to.be.true;
-            });
-
-            it('response should be called once', () => {
-                expect((endpointConfig.response as any).calledOnce).to.be.true;
-            });
-
-            it('response should be called with right arguments', () => {
-                expect((endpointConfig.response as any).firstCall.calledWithExactly(actionResult)).to.be.true;
-            });
+            checkResponseCalls(true);
         });
 
         describe('when one param was provided;', () => {
@@ -477,35 +381,13 @@ describe('NOVA-SERVER -> RouteController;', () => {
                     });
             });
 
-            it('authenticator should be called once', () => {
-                expect((authenticator as any).called).to.be.false;
-            });
+            checkAuthenticatorCalls(false);
 
-            it('adapter should be called once', () => {
-                expect((endpointConfig.adapter as any).calledOnce).to.be.true;
-            });
+            checkAdapterCalls(false, {id: 'test'});
 
-            it('adapter should be called with right arguments', () => {
-                let inputData = Object.assign({}, defaultsData, { id: 'test' });
+            checkActionCalls();
 
-                expect((endpointConfig.adapter as any).firstCall.calledWithExactly(inputData, undefined)).to.be.true;
-            });
-
-            it('action should be called once', () => {
-                expect((endpointConfig.action as any).calledOnce).to.be.true;
-            });
-
-            it('action should be called with right arguments', () => {
-                expect((endpointConfig.action as any).firstCall.calledWithExactly(adapterResult)).to.be.true;
-            });
-
-            it('response should be called once', () => {
-                expect((endpointConfig.response as any).calledOnce).to.be.true;
-            });
-
-            it('response should be called with right arguments', () => {
-                expect((endpointConfig.response as any).firstCall.calledWithExactly(actionResult)).to.be.true;
-            });
+            checkResponseCalls(false);
         });
 
         describe('when auth token, params, query and payloads was provided;', () => {
@@ -527,45 +409,13 @@ describe('NOVA-SERVER -> RouteController;', () => {
                     });
             });
 
-            it('authenticator should be called once', () => {
-                expect((authenticator as any).calledOnce).to.be.true;
-            });
+            checkAuthenticatorCalls(true);
 
-            it('authenticator should be called with right arguments', () => {
-                expect((authenticator as any).firstCall.calledWithExactly({
-                    scheme     : 'token',
-                    credentials: authToken
-                }, undefined)).to.be.true;
-            });
+            checkAdapterCalls(true, Object.assign({}, defaultQuery, defaultBody, {name: 'user', status: 'logged'} ));
 
-            it('adapter should be called once', () => {
-                expect((endpointConfig.adapter as any).calledOnce).to.be.true;
-            });
+            checkActionCalls();
 
-            it('adapter should be called with right arguments', () => {
-                let inputData = Object.assign({}, defaultsData, defaultQuery, {
-                    name  : 'user',
-                    status: 'logged'
-                }, defaultBody);
-
-                expect((endpointConfig.adapter as any).firstCall.calledWithExactly(inputData, authResult)).to.be.true;
-            });
-
-            it('action should be called once', () => {
-                expect((endpointConfig.action as any).calledOnce).to.be.true;
-            });
-
-            it('action should be called with right arguments', () => {
-                expect((endpointConfig.action as any).firstCall.calledWithExactly(adapterResult)).to.be.true;
-            });
-
-            it('response should be called once', () => {
-                expect((endpointConfig.response as any).calledOnce).to.be.true;
-            });
-
-            it('response should be called with right arguments', () => {
-                expect((endpointConfig.response as any).firstCall.calledWithExactly(actionResult)).to.be.true;
-            });
+            checkResponseCalls(true);
         });
 
         describe('when auth options was provided in route config;', () => {
@@ -592,20 +442,13 @@ describe('NOVA-SERVER -> RouteController;', () => {
                     });
             });
 
-            it('authenticator should be called once', () => {
-                expect((authenticator as any).calledOnce).to.be.true;
-            });
+            checkAuthenticatorCalls(true, authOptions);
 
-            it('authenticator should be called with right arguments', () => {
-                expect((authenticator as any).firstCall.calledWithExactly({
-                    scheme     : 'token',
-                    credentials: authToken
-                }, authOptions)).to.be.true;
-            });
+            checkAdapterCalls(true);
 
-            it('adapter should be called with right arguments', () => {
-                expect((endpointConfig.adapter as any).firstCall.calledWithExactly(defaultsData, authResult)).to.be.true;
-            });
+            checkActionCalls();
+
+            checkResponseCalls(true);
         });
 
         describe('when dao options was not provided in route config;', () => {
@@ -853,21 +696,19 @@ describe('NOVA-SERVER -> RouteController;', () => {
 
         describe('if authenticator was rejected;', () => {
             beforeEach(() => {
+                authenticator.authenticate = function () {
+                    try {
+                        validate.authorized(false, 'Invalid token');
+                    } catch (e) {
+                        return Promise.reject(e);
+                    }
+                };
+
                 appConfig = {
                     name         : 'Test API Server',
                     version      : '0.0.1',
                     database     : database,
-                    authenticator: {
-                        decode      : undefined, // TODO: set to something
-                        authenticate: function() {
-                            try {
-                                validate.authorized(false, 'Invalid token');
-                            } catch (e) {
-                                return Promise.reject(e);
-                            }
-                        },
-                        toOwner     : undefined // TODO: set to something
-                    }
+                    authenticator: authenticator
                 };
 
                 router = new RouteController();
@@ -915,15 +756,13 @@ describe('NOVA-SERVER -> RouteController;', () => {
 
         describe('if authenticator return error;', () => {
             beforeEach(() => {
+                authenticator.authenticate = sinon.stub().throws('TypeError');
+
                 appConfig = {
                     name         : 'Test API Server',
                     version      : '0.0.1',
                     database     : database,
-                    authenticator: {
-                        decode      : undefined, // TODO: set to something
-                        authenticate: sinon.stub().throws('TypeError'),
-                        toOwner     : undefined // TODO: set to something
-                    }
+                    authenticator: authenticator
                 };
 
                 router = new RouteController();
@@ -957,3 +796,90 @@ describe('NOVA-SERVER -> RouteController;', () => {
         });
     });
 });
+
+// helpers
+function checkAuthenticatorCalls(shouldCall = true, options?) {
+    if (shouldCall) {
+        it('authenticator.decode should be called once', () => {
+            expect((authenticator.decode as any).calledOnce).to.be.true;
+        });
+
+        it('authenticator.decode should be called with right arguments', () => {
+            expect((authenticator.decode as any).firstCall.calledWithExactly({
+                scheme     : 'token',
+                credentials: authToken
+            })).to.be.true;
+        });
+
+        it('authenticator.authenticate should be called once', () => {
+            expect((authenticator.authenticate as any).calledOnce).to.be.true;
+        });
+
+        it('authenticator.authenticate should be called with right arguments', () => {
+            expect((authenticator.authenticate as any).firstCall.calledWithExactly(requester, options)).to.be.true;
+        });
+    } else {
+        it('authenticator.decode should be not called', () => {
+            expect((authenticator.decode as any).called).to.be.false;
+        });
+
+        it('authenticator.authenticate should not be called', () => {
+            expect((authenticator.authenticate as any).called).to.be.false;
+        });
+    }
+}
+
+function checkAdapterCalls(shouldHaveAuthData = true, data = {}) {
+
+    if (shouldHaveAuthData) {
+        it('adapter should be called once', () => {
+            expect((endpointConfig.adapter as any).calledOnce).to.be.true;
+        });
+
+        it('adapter should be called with right arguments', () => {
+            let args = Object.assign({}, defaultsData, data);
+
+            expect((endpointConfig.adapter as any).firstCall.calledWithExactly(args, requester)).to.be.true;
+        });
+    } else {
+        it('adapter should be called once', () => {
+            expect((endpointConfig.adapter as any).calledOnce).to.be.true;
+        });
+
+        it('adapter should be called with right arguments', () => {
+            let args = Object.assign({}, defaultsData, data);
+
+            expect((endpointConfig.adapter as any).firstCall.calledWithExactly(args, undefined)).to.be.true;
+        });
+    }
+}
+
+function checkResponseCalls(shouldHaveAuthData = true) {
+    if (shouldHaveAuthData) {
+        it('response should be called once', () => {
+            expect((endpointConfig.response as any).calledOnce).to.be.true;
+        });
+
+        it('response should be called with right arguments', () => {
+            expect((endpointConfig.response as any).firstCall.calledWithExactly(actionResult, undefined, toOwnerResult)).to.be.true;
+        });
+    } else {
+        it('response should be called once', () => {
+            expect((endpointConfig.response as any).calledOnce).to.be.true;
+        });
+
+        it('response should be called with right arguments', () => {
+            expect((endpointConfig.response as any).firstCall.calledWith(actionResult, undefined)).to.be.true;
+        });
+    }
+}
+
+function checkActionCalls() {
+    it('action should be called once', () => {
+        expect((endpointConfig.action as any).calledOnce).to.be.true;
+    });
+
+    it('action should be called with right arguments', () => {
+        expect((endpointConfig.action as any).firstCall.calledWithExactly(adapterResult)).to.be.true;
+    });
+}

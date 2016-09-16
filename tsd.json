@@ -27,25 +27,25 @@
       "commit": "7d6547a8a0c3f35ce5de82ba58bfd143c0d20fab"
     },
     "chai/chai.d.ts": {
-      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+      "commit": "154a9c0274fa8add9d0a7dd352ff5138d35ff53e"
     },
     "assertion-error/assertion-error.d.ts": {
-      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+      "commit": "154a9c0274fa8add9d0a7dd352ff5138d35ff53e"
     },
     "sinon/sinon.d.ts": {
-      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+      "commit": "154a9c0274fa8add9d0a7dd352ff5138d35ff53e"
     },
     "socket.io-client/socket.io-client.d.ts": {
-      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+      "commit": "154a9c0274fa8add9d0a7dd352ff5138d35ff53e"
     },
     "mocha/mocha.d.ts": {
-      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+      "commit": "154a9c0274fa8add9d0a7dd352ff5138d35ff53e"
     },
     "supertest/supertest.d.ts": {
-      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+      "commit": "154a9c0274fa8add9d0a7dd352ff5138d35ff53e"
     },
     "superagent/superagent.d.ts": {
-      "commit": "e04d3b152eeb9c01628955bd0e997ce4b7501276"
+      "commit": "154a9c0274fa8add9d0a7dd352ff5138d35ff53e"
     }
   }
 }
