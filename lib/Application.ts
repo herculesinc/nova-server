@@ -57,9 +57,10 @@ export interface WebServerConfig {
 export class Application extends events.EventEmitter {
 
     name            : string;
-    version         : string;
+    version         : string;    
     context         : nova.ExecutorContext;
 
+    logger          : nova.Logger;
     webServer       : http.Server | https.Server;
     ioServer        : socketio.Server;
 
@@ -80,6 +81,7 @@ export class Application extends events.EventEmitter {
         // initialize basic instance variables
         this.name = options.name;
         this.version = options.version;
+        this.logger = options.logger;
 
         // initialize servers
         this.setWebServer(options.webServer);
@@ -135,7 +137,7 @@ export class Application extends events.EventEmitter {
         this.router = Router();
 
         // attache the first handler
-        this.router.use(firsthandler(this.name, this.version, options));
+        this.router.use(firsthandler(this.name, this.version, options, this.logger));
 
         // bind express app to the server
         this.webServer.on('request', (request, response) => {

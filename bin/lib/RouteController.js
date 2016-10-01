@@ -100,8 +100,6 @@ class RouteController {
                     response.end();
                 }
                 else {
-                    // log the request
-                    logger && logger.request(request, response);
                     // check for server load
                     return toobusy() ? next(new nova_base_1.TooBusyError()) : next();
                 }

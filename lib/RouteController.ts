@@ -173,9 +173,6 @@ export class RouteController {
                     response.end();
                 }
                 else {
-                    // log the request
-                    logger && logger.request(request, response);
-
                     // check for server load
                     return toobusy() ? next(new TooBusyError()) : next();
                 }

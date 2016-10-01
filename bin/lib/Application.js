@@ -37,6 +37,7 @@ class Application extends events.EventEmitter {
         // initialize basic instance variables
         this.name = options.name;
         this.version = options.version;
+        this.logger = options.logger;
         // initialize servers
         this.setWebServer(options.webServer);
         this.setIoServer(options.ioServer);
@@ -81,7 +82,7 @@ class Application extends events.EventEmitter {
         this.webServer = options.server || http.createServer();
         this.router = Router();
         // attache the first handler
-        this.router.use(firsthandler_1.firsthandler(this.name, this.version, options));
+        this.router.use(firsthandler_1.firsthandler(this.name, this.version, options, this.logger));
         // bind express app to the server
         this.webServer.on('request', (request, response) => {
             // use custom final handler with express
