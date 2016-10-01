@@ -159,6 +159,8 @@ class RouteController {
         handlers.push(function (request, response, next) {
             return __awaiter(this, void 0, void 0, function* () {
                 try {
+                    // remember current time
+                    const timestamp = Date.now();
                     // set up a flag to track whether is is an authenticated request or not
                     let authenticated = false;
                     // build inputs object
@@ -183,7 +185,7 @@ class RouteController {
                         requestor = request.ip;
                     }
                     // execute the action
-                    const result = yield executor.execute(inputs, requestor);
+                    const result = yield executor.execute(inputs, requestor, timestamp);
                     // build response
                     if (config.response) {
                         let view;
@@ -195,17 +197,19 @@ class RouteController {
                         }
                         else {
                             const viewBuilderOptions = (typeof config.response.options === 'function')
-                                ? config.response.options(inputs, result, viewer)
+                                ? config.response.options(inputs, result, viewer, timestamp)
                                 : config.response.options;
-                            view = config.response.view(result, viewBuilderOptions, viewer);
+                            view = config.response.view(result, viewBuilderOptions, viewer, timestamp);
                         }
                         if (!view)
                             throw new nova_base_1.Exception('Resource not found', 404 /* NotFound */);
                         if (typeof view !== 'object')
                             throw new nova_base_1.Exception(`View for ${request.method} ${request.path} returned invalid value`);
                         response.statusCode = 200 /* OK */;
+                        const body = JSON.stringify(view);
                         response.setHeader('Content-Type', 'application/json; charset=utf-8');
-                        response.end(JSON.stringify(view), 'utf8');
+                        response.setHeader('Content-Length', Buffer.byteLength(body, 'utf8').toString(10));
+                        response.end(body, 'utf8');
                     }
                     else {
                         response.statusCode = 204 /* NoContent */;

@@ -47,7 +47,7 @@ function send(request, response, status, headers, body) {
         }
         // standard headers
         response.setHeader('Content-Type', 'application/json; charset=utf-8');
-        // response.setHeader('Content-Length', Buffer.byteLength(body, 'utf8').toString(10));
+        response.setHeader('Content-Length', Buffer.byteLength(body, 'utf8').toString(10));
         if (request.method === 'HEAD') {
             response.end();
         }

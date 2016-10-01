@@ -85,7 +85,7 @@ interface FileBodyOptions extends RequestBodyOptions {
 }
 
 export interface ViewBuilder<T> {
-    (result: T, options?: any, viewer?: string): any;
+    (result: T, options?: any, viewer?: string, timestamp?: number): any;
 }
 
 export interface ViewOptionsBuilder {
@@ -243,6 +243,9 @@ export class RouteController {
         // build endpoint handler
         handlers.push(async function(request: Request, response: Response, next: Function) {
             try {
+                // remember current time
+                const timestamp = Date.now();
+
                 // set up a flag to track whether is is an authenticated request or not
                 let authenticated = false;
 
@@ -271,7 +274,7 @@ export class RouteController {
                 }
 
                 // execute the action
-                const result = await executor.execute(inputs, requestor);
+                const result = await executor.execute(inputs, requestor, timestamp);
 
                 // build response
                 if (config.response) {
@@ -285,17 +288,19 @@ export class RouteController {
                     }
                     else {
                         const viewBuilderOptions = (typeof config.response.options === 'function')
-                            ? config.response.options(inputs, result, viewer)
+                            ? config.response.options(inputs, result, viewer, timestamp)
                             : config.response.options;
-                        view = config.response.view(result, viewBuilderOptions, viewer);
+                        view = config.response.view(result, viewBuilderOptions, viewer, timestamp);
                     }
 
                     if (!view) throw new Exception('Resource not found', HttpStatusCode.NotFound);
                     if (typeof view !== 'object') throw new Exception(`View for ${request.method} ${request.path} returned invalid value`);
 
                     response.statusCode = HttpStatusCode.OK;
+                    const body = JSON.stringify(view);
                     response.setHeader('Content-Type', 'application/json; charset=utf-8');
-                    response.end(JSON.stringify(view), 'utf8')
+                    response.setHeader('Content-Length', Buffer.byteLength(body, 'utf8').toString(10));
+                    response.end(body, 'utf8');
                 }
                 else {
                     response.statusCode = HttpStatusCode.NoContent;
