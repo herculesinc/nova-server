@@ -253,7 +253,7 @@ export class RouteController {
 
                 // get the executor
                 const executor = executorMap.get(inputs[selector]);
-                validate.inputs(!selector || executor, `No actions found for the specified ${selector}`);
+                validate.input(!selector || executor, `No actions found for the specified ${selector}`);
 
                 // check authorization header
                 let requestor: any;

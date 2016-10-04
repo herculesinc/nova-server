@@ -12,7 +12,7 @@ interface HelloWorldInputs {
 }
 
 export async function helloWorldAdapter(this: ActionContext, inputs: any, token: Token): Promise<HelloWorldInputs> {
-    validate.inputs(inputs.author, 'Author must be provided');
+    validate.input(inputs.author, 'Author must be provided');
     const user = await (this.dao as any).fetchUserById(token.userId);
     validate.authorized(user, 'Authorization required');
     return { 

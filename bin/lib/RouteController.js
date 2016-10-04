@@ -167,7 +167,7 @@ class RouteController {
                         : Object.assign({}, config.defaults, request.query, request.params, request.body);
                     // get the executor
                     const executor = executorMap.get(inputs[selector]);
-                    nova_base_1.validate.inputs(!selector || executor, `No actions found for the specified ${selector}`);
+                    nova_base_1.validate.input(!selector || executor, `No actions found for the specified ${selector}`);
                     // check authorization header
                     let requestor;
                     const authHeader = request.headers['authorization'] || request.headers['Authorization'];
