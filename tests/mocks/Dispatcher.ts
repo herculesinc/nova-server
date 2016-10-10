@@ -1,16 +1,23 @@
 // IMPORTS
 // ================================================================================================
-import { Dispatcher, Task } from 'nova-base';
+import { Dispatcher, QueueMessage, QueueMessageOptions } from 'nova-base';
 
 // DISPATCHER CLASS
 // =================================================================================================
 export class MockDispatcher implements Dispatcher {
-    dispatch(taskOrTasks: Task | Task[]): Promise<any> {
-        if (!taskOrTasks) return Promise.resolve();
-        const tasks = Array.isArray(taskOrTasks) ? taskOrTasks : [taskOrTasks];
-        for (let task of tasks) {
-            console.log(`Dispatching a task to {${task.queue}} queue`);
-        }
-        return Promise.resolve();
+    
+    sendMessage(queue: string, payload: any, options?: QueueMessageOptions, callback?: (error?: Error) => void) {
+        console.log(`Sending a message to '${queue}' queue`);
+        callback();
+    }
+
+    receiveMessage(queue: string, callback: (error: Error, message: QueueMessage) => void) {
+        console.log(`Receiving a message from '${queue}' queue`);
+        callback(undefined, undefined);
+    }
+    
+    deleteMessage(message: QueueMessage, callback?: (error?: Error) => void) {
+        console.log(`Deleting a message from '${message.queue}' queue`);
+        callback();
     }
 }
