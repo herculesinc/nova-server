@@ -191,7 +191,7 @@ class RouteController {
                             ? executor.authenticator.toOwner(requestor)
                             : requestor;
                         if (typeof config.response === 'function') {
-                            view = config.response(result, undefined, viewer);
+                            view = config.response(result, undefined, viewer, timestamp);
                         }
                         else {
                             const viewBuilderOptions = (typeof config.response.options === 'function')

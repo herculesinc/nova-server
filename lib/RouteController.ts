@@ -89,7 +89,7 @@ export interface ViewBuilder<T> {
 }
 
 export interface ViewOptionsBuilder {
-    (inputs: any, result: any, viewer?: string): any;
+    (inputs: any, result: any, viewer?: string, timestamp?: number): any;
 }
 
 export interface ResponseOptions<T> {
@@ -281,7 +281,7 @@ export class RouteController {
                         : requestor;
 
                     if (typeof config.response === 'function') {
-                        view = config.response(result, undefined, viewer);
+                        view = config.response(result, undefined, viewer, timestamp);
                     }
                     else {
                         const viewBuilderOptions = (typeof config.response.options === 'function')

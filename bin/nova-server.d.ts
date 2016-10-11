@@ -84,7 +84,7 @@ declare module "nova-server" {
     }
 
     export interface ViewOptionsBuilder {
-        (inputs: any, result: any, viewer?: string): any;
+        (inputs: any, result: any, viewer?: string, timestamp?: number): any;
     }
 
     export interface ResponseOptions<T> {
