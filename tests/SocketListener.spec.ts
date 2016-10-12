@@ -81,7 +81,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             socketClient.off('connect');
             socketClient.off('error');
             app.webServer.close();
-            done();
+            setTimeout(done, 250);
         });
 
         it('should connect socket client', () => {
@@ -169,7 +169,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
                 socketClient.off('connect');
                 socketClient.off('error');
                 app.webServer.close();
-                done();
+                setTimeout(done, 250);
             });
 
             it('authenticator.decode should be called once', () => {
@@ -248,7 +248,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
                 socketClient.off('connect');
                 socketClient.off('error');
                 app.webServer.close();
-                done();
+                setTimeout(done, 250);
             });
 
             it('authenticator.decode should be called once', () => {
@@ -328,7 +328,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
                 socketClient.off('connect');
                 socketClient.off('error');
                 app.webServer.close();
-                done();
+                setTimeout(done, 250);
             });
 
             it('authenticator.decode should be called once', () => {
@@ -404,7 +404,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
                 socketClient.off('connect');
                 socketClient.off('error');
                 app.webServer.close();
-                done();
+                setTimeout(done, 250);
             });
 
             it('database.connect should be called twice', () => {
@@ -450,7 +450,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
                 socketClient.off('connect');
                 socketClient.off('error');
                 app.webServer.close();
-                done();
+                setTimeout(done, 250);
             });
 
             it('database.connect should be called twice', () => {
@@ -498,7 +498,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             afterEach(done => {
                 socketClient.off('error');
                 app.webServer.close();
-                done();
+                setTimeout(done, 250);
             });
 
             it('socket client should return error', done => {
@@ -568,7 +568,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             afterEach(done => {
                 socketClient.off('error');
                 app.webServer.close();
-                done();
+                setTimeout(done, 250);
             });
 
             it('socket client should return error', done => {
@@ -632,7 +632,7 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             afterEach(done => {
                 socketClient.off('error');
                 app.webServer.close();
-                done();
+                setTimeout(done, 500);
             });
 
             it('socket client should return error', done => {
