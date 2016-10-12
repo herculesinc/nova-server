@@ -855,23 +855,29 @@ function checkAdapterCalls(shouldHaveAuthData = true, data = {}) {
 }
 
 function checkResponseCalls(shouldHaveAuthData = true) {
-    if (shouldHaveAuthData) {
-        it('response should be called once', () => {
-            expect((endpointConfig.response as any).calledOnce).to.be.true;
-        });
+    it('response should be called once', () => {
+        expect((endpointConfig.response as any).calledOnce).to.be.true;
+    });
 
-        it('response should be called with right arguments', () => {
-            expect((endpointConfig.response as any).firstCall.calledWithExactly(actionResult, undefined, toOwnerResult)).to.be.true;
-        });
-    } else {
-        it('response should be called once', () => {
-            expect((endpointConfig.response as any).calledOnce).to.be.true;
-        });
+    it('response should be called with right arguments', () => {
+        let args = (endpointConfig.response as any).firstCall.args;
 
-        it('response should be called with right arguments', () => {
-            expect((endpointConfig.response as any).firstCall.calledWith(actionResult, undefined)).to.be.true;
-        });
-    }
+        expect(args).to.have.length(4);
+
+        expect(args[0]).to.deep.equal(actionResult);
+        expect(args[1]).to.be.undefined;
+
+        if (shouldHaveAuthData) {
+            expect(args[2]).to.equal(requester.id);
+        } else {
+            expect(args[2]).to.not.be.empty;
+            expect(args[2]).to.be.a('string');
+        }
+
+        expect(args[3]).to.not.be.empty;
+        expect(args[3]).to.be.a('number');
+        expect(args[3]).to.be.within(Date.now() - 1000, Date.now());
+    });
 }
 
 function checkActionCalls() {
