@@ -1,4 +1,5 @@
 ///<reference path='../typings/tsd.d.ts'/>
+///<reference path='../node_modules/nova-base/nova-base.d.ts'/>
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import * as io from 'socket.io-client';
@@ -78,10 +79,9 @@ describe('NOVA-SERVER -> SocketListener;', () => {
         });
 
         afterEach(done => {
-            socketClient.off('connect');
-            socketClient.off('error');
+            app.webServer.on('close', done);
             app.webServer.close();
-            setTimeout(done, 250);
+            socketClient.destroy();
         });
 
         it('should connect socket client', () => {
@@ -166,10 +166,9 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             afterEach(done => {
-                socketClient.off('connect');
-                socketClient.off('error');
+                app.webServer.on('close', done);
                 app.webServer.close();
-                setTimeout(done, 250);
+                socketClient.destroy();
             });
 
             it('authenticator.decode should be called once', () => {
@@ -245,10 +244,9 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             afterEach(done => {
-                socketClient.off('connect');
-                socketClient.off('error');
+                app.webServer.on('close', done);
                 app.webServer.close();
-                setTimeout(done, 250);
+                socketClient.destroy();
             });
 
             it('authenticator.decode should be called once', () => {
@@ -325,10 +323,9 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             afterEach(done => {
-                socketClient.off('connect');
-                socketClient.off('error');
+                app.webServer.on('close', done);
                 app.webServer.close();
-                setTimeout(done, 250);
+                socketClient.destroy();
             });
 
             it('authenticator.decode should be called once', () => {
@@ -401,10 +398,9 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             afterEach(done => {
-                socketClient.off('connect');
-                socketClient.off('error');
+                app.webServer.on('close', done);
                 app.webServer.close();
-                setTimeout(done, 250);
+                socketClient.destroy();
             });
 
             it('database.connect should be called twice', () => {
@@ -447,10 +443,9 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             afterEach(done => {
-                socketClient.off('connect');
-                socketClient.off('error');
+                app.webServer.on('close', done);
                 app.webServer.close();
-                setTimeout(done, 250);
+                socketClient.destroy();
             });
 
             it('database.connect should be called twice', () => {
@@ -496,9 +491,9 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             afterEach(done => {
-                socketClient.off('error');
+                app.webServer.on('close', done);
                 app.webServer.close();
-                setTimeout(done, 250);
+                socketClient.destroy();
             });
 
             it('socket client should return error', done => {
@@ -566,9 +561,9 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             afterEach(done => {
-                socketClient.off('error');
+                app.webServer.on('close', done);
                 app.webServer.close();
-                setTimeout(done, 250);
+                socketClient.destroy();
             });
 
             it('socket client should return error', done => {
@@ -630,9 +625,9 @@ describe('NOVA-SERVER -> SocketListener;', () => {
             });
 
             afterEach(done => {
-                socketClient.off('error');
+                app.webServer.on('close', done);
                 app.webServer.close();
-                setTimeout(done, 500);
+                socketClient.destroy();
             });
 
             it('socket client should return error', done => {
