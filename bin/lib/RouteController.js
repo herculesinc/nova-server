@@ -162,9 +162,15 @@ class RouteController {
                     // set up a flag to track whether is is an authenticated request or not
                     let authenticated = false;
                     // build inputs object
-                    const inputs = config.body && config.body.type === 'files'
-                        ? Object.assign({}, config.defaults, request.query, request.params, { files: request.files })
-                        : Object.assign({}, config.defaults, request.query, request.params, request.body);
+                    let inputs;
+                    if (config.body && config.body.type === 'files') {
+                        inputs = Object.assign({}, config.defaults, request.query, request.params, { files: request.files });
+                    }
+                    else {
+                        const bodyField = config.body && config.body.mapTo;
+                        const body = bodyField ? { [bodyField]: request.body } : request.body;
+                        inputs = Object.assign({}, config.defaults, request.query, request.params, body);
+                    }
                     // get the executor
                     const executor = executorMap.get(inputs[selector]);
                     nova_base_1.validate.input(!selector || executor, `No actions found for the specified ${selector}`);
@@ -261,13 +267,24 @@ function getBodyParser(config) {
         if (typeof fConfig.limits.size !== 'number' || typeof fConfig.limits.count !== 'number')
             throw new TypeError(`'limits' are invalid in file body options`);
         // build middleware
-        return multer({
+        const uploader = multer({
             storage: multer.memoryStorage(),
             limits: {
                 files: fConfig.limits.count,
                 fileSize: fConfig.limits.size
             }
         }).array(fConfig.field);
+        return function (request, response, next) {
+            uploader(request, response, function (error) {
+                if (error) {
+                    const code = error.code;
+                    if (typeof code === 'string' && code.startsWith('LIMIT')) {
+                        error = nova_base_1.validate.input(error, 'Upload failed');
+                    }
+                }
+                next(error);
+            });
+        };
     }
     else {
         throw new TypeError(`Body type '${config.type}' is not supported`);

@@ -2,7 +2,7 @@
 // =================================================================================================
 import {
     Action, ActionAdapter, Executor, ExecutorContext, ExecutionOptions, AuthInputs, RateOptions,
-    DaoOptions, HttpStatusCode, Exception, validate, TooBusyError, UnsupportedMethodError
+    DaoOptions, HttpStatusCode, Exception, validate, TooBusyError, UnsupportedMethodError, util
 } from 'nova-base';
 import { Router, RequestHandler, Request, Response } from 'router';
 import * as accepts from 'accepts';
@@ -74,6 +74,7 @@ interface RequestBodyOptions {
 
 interface JsonBodyOptions extends RequestBodyOptions {
     limit?      : number;
+    mapTo?      : string;
 }
 
 interface FileBodyOptions extends RequestBodyOptions {
@@ -247,9 +248,15 @@ export class RouteController {
                 let authenticated = false;
 
                 // build inputs object
-                const inputs = config.body && config.body.type === 'files'
-                    ? Object.assign({}, config.defaults, request.query, request.params, { files: request.files })
-                    : Object.assign({}, config.defaults, request.query, request.params, request.body)
+                let inputs: any;
+                if (config.body && config.body.type === 'files') {
+                    inputs = Object.assign({}, config.defaults, request.query, request.params, { files: request.files });
+                }
+                else {
+                    const bodyField = config.body && (config.body as JsonBodyOptions).mapTo;
+                    const body = bodyField ? { [bodyField]: request.body } : request.body;
+                    inputs = Object.assign({}, config.defaults, request.query, request.params, body);
+                }
 
                 // get the executor
                 const executor = executorMap.get(inputs[selector]);
@@ -354,13 +361,25 @@ function getBodyParser(config: JsonBodyOptions | FileBodyOptions): RequestHandle
             throw new TypeError(`'limits' are invalid in file body options`);
 
         // build middleware
-        return multer({
+        const uploader = multer({
             storage: multer.memoryStorage(),
             limits: {
                 files   : fConfig.limits.count,
                 fileSize: fConfig.limits.size
             }
         }).array(fConfig.field);
+
+        return function(request, response, next) {
+            uploader(request, response, function (error) {
+                if (error) {
+                    const code: string = (error as any).code;
+                    if (typeof code === 'string' && code.startsWith('LIMIT')) {
+                        error = validate.input(error, 'Upload failed');
+                    }
+                }
+                next(error);
+            });
+        };
     }
     else {
         throw new TypeError(`Body type '${config.type}' is not supported`);

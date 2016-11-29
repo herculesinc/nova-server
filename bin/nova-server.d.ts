@@ -98,6 +98,7 @@ declare module "nova-server" {
 
     export interface JsonBodyOptions {
         type        : 'json';
+        mapTo?      : string;
         limit?      : number;
     }
 

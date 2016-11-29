@@ -21,6 +21,7 @@ let endpointConfig: EndpointConfig<any, any>;
 let fakeRequest: any;
 
 const daoOptions: DaoOptions = { startTransaction: true };
+const unauthRequester: string = '::ffff:127.0.0.1';
 const requester: any = { id: '12345', name: 'user' };
 const toOwnerResult: string = requester.id;
 const actionResult: any = { results: 'action results' };
@@ -849,7 +850,7 @@ function checkAdapterCalls(shouldHaveAuthData = true, data = {}) {
         it('adapter should be called with right arguments', () => {
             let args = Object.assign({}, defaultsData, data);
 
-            expect((endpointConfig.adapter as any).firstCall.calledWithExactly(args, undefined)).to.be.true;
+            expect((endpointConfig.adapter as any).firstCall.calledWithExactly(args, unauthRequester)).to.be.true;
         });
     }
 }
