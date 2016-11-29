@@ -947,14 +947,28 @@ describe('NOVA-SERVER -> RouteController;', () => {
                     .attach('image', jpegImage)
                     .attach('image', jpegImage)
                     .attach('image', jpegImage)
-                    .expect(402, done);
+                    .expect(402)
+                    .end((err, res) => {
+                        if (err) {
+                            done(err);
+                        }
+                        expect(res.body.message).to.contain('Too many files');
+                        done();
+                    });
             });
 
             it('should return 402 when sending big file', done => {
                 request(app.webServer)
                     .post('/')
                     .attach('image', bigImage)
-                    .expect(402, done);
+                    .expect(402)
+                    .end((err, res) => {
+                        if (err) {
+                            done(err);
+                        }
+                        expect(res.body.message).to.contain('File too large');
+                        done();
+                    });
             });
 
             it('should return 402 when sending too many files and big file', done => {
@@ -963,14 +977,28 @@ describe('NOVA-SERVER -> RouteController;', () => {
                     .attach('image', bigImage)
                     .attach('image', jpegImage)
                     .attach('image', bigImage)
-                    .expect(402, done);
+                    .expect(402)
+                    .end((err, res) => {
+                        if (err) {
+                            done(err);
+                        }
+                        expect(res.body.message).to.contain('File too large');
+                        done();
+                    });
             });
 
             it('should return 402 when sending file with wrong \'field\' property', done => {
                 request(app.webServer)
                     .post('/')
                     .attach('file', jpegImage)
-                    .expect(402, done);
+                    .expect(402)
+                    .end((err, res) => {
+                        if (err) {
+                            done(err);
+                        }
+                        expect(res.body.message).to.contain('Unexpected field');
+                        done();
+                    });
             });
 
             it('should return 402 when sending one file with wrong \'field\' property', done => {
@@ -978,7 +1006,14 @@ describe('NOVA-SERVER -> RouteController;', () => {
                     .post('/')
                     .attach('image', jpegImage)
                     .attach('file', jpegImage)
-                    .expect(402, done);
+                    .expect(402)
+                    .end((err, res) => {
+                        if (err) {
+                            done(err);
+                        }
+                        expect(res.body.message).to.contain('Unexpected field');
+                        done();
+                    });
             });
         });
     });
