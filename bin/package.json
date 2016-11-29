@@ -1,6 +1,6 @@
 {
   "name": "nova-server",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Action-based Web API framework written in TypeScript",
   "keywords": [
     "nova",

@@ -105,6 +105,7 @@ declare module "nova-server" {
     export interface FileBodyOptions {
         type        : 'files';
         field       : string;
+        storage?    : any;
         limits?: {
             count   : number;
             size    : number;

@@ -79,6 +79,7 @@ interface JsonBodyOptions extends RequestBodyOptions {
 
 interface FileBodyOptions extends RequestBodyOptions {
     field       : string;
+    storage?    : any;
     limits?: {
         count   : number;
         size    : number;
@@ -362,7 +363,7 @@ function getBodyParser(config: JsonBodyOptions | FileBodyOptions): RequestHandle
 
         // build middleware
         const uploader = multer({
-            storage: multer.memoryStorage(),
+            storage: fConfig.storage || multer.memoryStorage(),
             limits: {
                 files   : fConfig.limits.count,
                 fileSize: fConfig.limits.size
@@ -374,7 +375,7 @@ function getBodyParser(config: JsonBodyOptions | FileBodyOptions): RequestHandle
                 if (error) {
                     const code: string = (error as any).code;
                     if (typeof code === 'string' && code.startsWith('LIMIT')) {
-                        error = new Exception({message: 'Upload failed', cause: error, status: HttpStatusCode.InvalidInputs});
+                        error = new Exception({ message: 'Upload failed', cause: error, status: HttpStatusCode.InvalidInputs });
                     }
                 }
                 next(error);

@@ -268,7 +268,7 @@ function getBodyParser(config) {
             throw new TypeError(`'limits' are invalid in file body options`);
         // build middleware
         const uploader = multer({
-            storage: multer.memoryStorage(),
+            storage: fConfig.storage || multer.memoryStorage(),
             limits: {
                 files: fConfig.limits.count,
                 fileSize: fConfig.limits.size
@@ -279,7 +279,7 @@ function getBodyParser(config) {
                 if (error) {
                     const code = error.code;
                     if (typeof code === 'string' && code.startsWith('LIMIT')) {
-                        error = nova_base_1.validate.input(error, 'Upload failed');
+                        error = new nova_base_1.Exception({ message: 'Upload failed', cause: error, status: 402 /* InvalidInputs */ });
                     }
                 }
                 next(error);
