@@ -270,7 +270,7 @@ export class RouteController {
                     const authInputs = parseAuthHeader(authHeader);
                     validate(executor.authenticator, 'Cannot authenticate: authenticator is undefined');
                     requestor = executor.authenticator.decode(authInputs);
-                    authenticated = true;                    
+                    authenticated = true;
                 }
                 else {
                     // otherwise, set requestor to the IP address of the request
@@ -283,7 +283,7 @@ export class RouteController {
                 // build response
                 if (config.response) {
                     let view: any;
-                    let viewer: string = authenticated 
+                    let viewer: string = authenticated
                         ? executor.authenticator.toOwner(requestor)
                         : requestor;
 
@@ -374,7 +374,7 @@ function getBodyParser(config: JsonBodyOptions | FileBodyOptions): RequestHandle
                 if (error) {
                     const code: string = (error as any).code;
                     if (typeof code === 'string' && code.startsWith('LIMIT')) {
-                        error = validate.input(error, 'Upload failed');
+                        error = new Exception({message: 'Upload failed', cause: error, status: HttpStatusCode.InvalidInputs});
                     }
                 }
                 next(error);

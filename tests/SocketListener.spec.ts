@@ -652,5 +652,60 @@ describe('NOVA-SERVER -> SocketListener;', () => {
                 });
             });
         });
+
+        describe('if there is no handlers for emitted event;', () => {
+            let socketError;
+
+            beforeEach(done => {
+                app = createApp(appConfig);
+                app.on('error', () => undefined);
+
+                listener = new SocketListener();
+                listenerConfig = {
+                    action : sinon.stub().returns(Promise.resolve(actionResult)),
+                    adapter: sinon.stub().returns(Promise.resolve(adapterResult))
+                };
+                listener.on('test', listenerConfig);
+                app.register('/', listener);
+
+                (app.webServer as any).listen(testPort);
+
+                socketClient = io(`http://localhost:${testPort}`, {
+                    query: { authorization: `token ${authToken}` }
+                });
+
+                socketClient.on('error', done);
+                socketClient.on('connect', () => {
+                    socketClient.emit('unknown', payload, err => {
+                        if (!err) {
+                            return done('Should return error');
+                        }
+
+                        socketError = err;
+                        done();
+                    });
+                });
+            });
+
+            afterEach(done => {
+                app.webServer.on('close', done);
+                app.webServer.close();
+                socketClient.destroy();
+            });
+
+            it('socket client should return error', () => {
+                expect(socketError).to.not.be.undefined;
+                expect(socketError).to.not.be.null;
+
+            });
+
+            it('app should emmit error with \'todo\' message', done => {
+                expect(socketError.message).to.equal('todo');
+            });
+
+            it('app should emmit error with 404 status', done => {
+                expect(socketError.status).to.equal(404);
+            });
+        });
     });
 });
