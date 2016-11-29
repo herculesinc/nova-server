@@ -1,4 +1,5 @@
 ///<reference path='../typings/tsd.d.ts'/>
+import * as path from 'path';
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import * as request from 'supertest';
@@ -43,6 +44,9 @@ const authOptions: any = { isRequired: false };
 const routeDaoOptions: DaoOptions = { startTransaction: true };
 const authToken: string = 'testAuthToken';
 
+const jpegImage = path.join(process.cwd(), 'tests/fixtures/image.jpeg');
+const pngImage = path.join(process.cwd(), 'tests/fixtures/image.png');
+const bigImage = path.join(process.cwd(), 'tests/fixtures/1_1mb_image.png');
 
 describe('NOVA-SERVER -> RouteController;', () => {
     beforeEach(() => {
@@ -507,6 +511,129 @@ describe('NOVA-SERVER -> RouteController;', () => {
                 expect((appConfig.database.connect as any).firstCall.calledWithExactly(routeDaoOptions)).to.be.true;
             });
         });
+
+        describe('when \'mapTo\' but not auth token property was provided in route config;', () => {
+            const mapTo = 'mappedInputs';
+            const payload = {a: 1, b: 3};
+
+            beforeEach(done => {
+                endpointConfig.dao = routeDaoOptions;
+                endpointConfig.body = {
+                    type: 'json',
+                    mapTo: mapTo
+                };
+                routeConfig = { put: endpointConfig };
+                app = createApp(appConfig);
+                router = new RouteController();
+                router.set('/', routeConfig);
+                app.register('/', router);
+                app.on('error', () => undefined);
+
+                request(app.webServer)
+                    .put('/')
+                    .send(payload)
+                    .expect(200)
+                    .end((err, res) => {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        expect(res.body).to.deep.equal(viewResult);
+                        done();
+                    });
+            });
+
+            checkAuthenticatorCalls(false);
+
+            checkAdapterCalls(false, {[mapTo]: payload});
+
+            checkActionCalls();
+
+            checkResponseCalls(false);
+        });
+
+        describe('when \'mapTo\' and auth token property was provided in route config;', () => {
+            const mapTo = 'mappedInputs';
+            const payload = {c: 1, d: [4]};
+
+            beforeEach(done => {
+                endpointConfig.dao = routeDaoOptions;
+                endpointConfig.body = {
+                    type: 'json',
+                    mapTo: mapTo
+                };
+                routeConfig = { put: endpointConfig };
+                app = createApp(appConfig);
+                router = new RouteController();
+                router.set('/', routeConfig);
+                app.register('/', router);
+                app.on('error', () => undefined);
+
+                request(app.webServer)
+                    .put('/')
+                    .send(payload)
+                    .set('Authorization', `token ${authToken}`)
+                    .expect(200)
+                    .end((err, res) => {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        expect(res.body).to.deep.equal(viewResult);
+                        done();
+                    });
+            });
+
+            checkAuthenticatorCalls(true);
+
+            checkAdapterCalls(true, {[mapTo]: payload});
+
+            checkActionCalls();
+
+            checkResponseCalls(true);
+        });
+    });
+
+    describe('should create routes for uploading of files;', () => {
+        beforeEach(() => {
+            appConfig = {
+                name    : 'Test API Server',
+                version : '0.0.1',
+                database: database
+            };
+
+            app = createApp(appConfig);
+            router = new RouteController();
+            endpointConfig = {
+                action: sinon.stub().returns(Promise.resolve({ results: 'action results' })),
+                body: {
+                    type: 'files',
+                    field: 'picture',
+                    limits: {
+                        count: 2,
+                        size: 1048576
+                    }
+                }
+            };
+            router.set('/', { post: endpointConfig });
+            app.register('/', router);
+            app.on('error', () => undefined);
+        });
+
+        it('should return 204 when attaching one file', done => {
+            request(app.webServer)
+                .post('/')
+                .attach('picture', jpegImage)
+                .expect(204, done);
+        });
+
+        it('should return 204 when attaching 2 files', done => {
+            request(app.webServer)
+                .post('/')
+                .attach('picture', jpegImage)
+                .attach('picture', pngImage)
+                .expect(204, done);
+        });
     });
 
     describe('should emmit and return error', () => {
@@ -793,6 +920,100 @@ describe('NOVA-SERVER -> RouteController;', () => {
                         done(err);
                     }
                 });
+            });
+        });
+
+        describe('when sending files;', () => {
+            beforeEach(() => {
+                endpointConfig.body = {
+                    type: 'files',
+                    field: 'image',
+                    limits: {
+                        count: 2,
+                        size: 1048576
+                    }
+                };
+
+                router = new RouteController();
+                router.set('/', { post: endpointConfig });
+                app = createApp(appConfig);
+                app.register('/', router);
+                app.on('error', () => undefined);
+            });
+
+            it('should return 402 when sending to many files', done => {
+                request(app.webServer)
+                    .post('/')
+                    .attach('image', jpegImage)
+                    .attach('image', jpegImage)
+                    .attach('image', jpegImage)
+                    .expect(402)
+                    .end((err, res) => {
+                        if (err) {
+                            done(err);
+                        }
+                        expect(res.body.message).to.contain('Too many files');
+                        done();
+                    });
+            });
+
+            it('should return 402 when sending big file', done => {
+                request(app.webServer)
+                    .post('/')
+                    .attach('image', bigImage)
+                    .expect(402)
+                    .end((err, res) => {
+                        if (err) {
+                            done(err);
+                        }
+                        expect(res.body.message).to.contain('File too large');
+                        done();
+                    });
+            });
+
+            it('should return 402 when sending too many files and big file', done => {
+                request(app.webServer)
+                    .post('/')
+                    .attach('image', bigImage)
+                    .attach('image', jpegImage)
+                    .attach('image', bigImage)
+                    .expect(402)
+                    .end((err, res) => {
+                        if (err) {
+                            done(err);
+                        }
+                        expect(res.body.message).to.contain('File too large');
+                        done();
+                    });
+            });
+
+            it('should return 402 when sending file with wrong \'field\' property', done => {
+                request(app.webServer)
+                    .post('/')
+                    .attach('file', jpegImage)
+                    .expect(402)
+                    .end((err, res) => {
+                        if (err) {
+                            done(err);
+                        }
+                        expect(res.body.message).to.contain('Unexpected field');
+                        done();
+                    });
+            });
+
+            it('should return 402 when sending one file with wrong \'field\' property', done => {
+                request(app.webServer)
+                    .post('/')
+                    .attach('image', jpegImage)
+                    .attach('file', jpegImage)
+                    .expect(402)
+                    .end((err, res) => {
+                        if (err) {
+                            done(err);
+                        }
+                        expect(res.body.message).to.contain('Unexpected field');
+                        done();
+                    });
             });
         });
     });
