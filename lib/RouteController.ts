@@ -160,6 +160,8 @@ export class RouteController {
             const methods = ['OPTIONS'];
             const route = router.route(this.root + subpath);
             const corsOptions: CorsOptions = Object.assign({}, defaults.CORS, config.cors);
+            const allowedHeaders = corsOptions.headers.join(',');
+            let allowedMethods: string; // will be set later in the function
 
             route.all(function(request: Request, response: Response, next: Function) {
                 // add CORS response headers for all requests
@@ -205,10 +207,9 @@ export class RouteController {
                 methods.push('DELETE');
             }
 
-            // these variables are used in the server.all() handler above
-            var allowedMethods = methods.join(',');
-            var allowedHeaders = corsOptions.headers.join(',');
-
+            // set here to include all allowed methods
+            allowedMethods = methods.join(',');
+            
             // catch unsupported method requests
             route.all(function(request: Request, response: Response, next: Function) {
                 next(new UnsupportedMethodError(request.method, request.path));

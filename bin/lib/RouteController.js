@@ -87,6 +87,8 @@ class RouteController {
             const methods = ['OPTIONS'];
             const route = router.route(this.root + subpath);
             const corsOptions = Object.assign({}, index_1.defaults.CORS, config.cors);
+            const allowedHeaders = corsOptions.headers.join(',');
+            let allowedMethods; // will be set later in the function
             route.all(function (request, response, next) {
                 // add CORS response headers for all requests
                 response.setHeader('Access-Control-Allow-Methods', allowedMethods);
@@ -124,9 +126,8 @@ class RouteController {
                 route.delete(...this.buildEndpointHandlers(config.delete));
                 methods.push('DELETE');
             }
-            // these variables are used in the server.all() handler above
-            var allowedMethods = methods.join(',');
-            var allowedHeaders = corsOptions.headers.join(',');
+            // set here to include all allowed methods
+            allowedMethods = methods.join(',');
             // catch unsupported method requests
             route.all(function (request, response, next) {
                 next(new nova_base_1.UnsupportedMethodError(request.method, request.path));
