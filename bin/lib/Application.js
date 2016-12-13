@@ -1,18 +1,18 @@
 "use strict";
 // IMPORTS
 // =================================================================================================
-const http = require('http');
-const events = require('events');
-const Router = require('router');
-const socketio = require('socket.io');
-const toobusy = require('toobusy-js');
-const nova = require('nova-base');
-const RouteController_1 = require('./RouteController');
-const SocketListener_1 = require('./SocketListener');
-const SocketNotifier_1 = require('./SocketNotifier');
-const util_1 = require('./util');
-const firsthandler_1 = require('./routing/firsthandler');
-const finalhandler_1 = require('./routing/finalhandler');
+const http = require("http");
+const events = require("events");
+const Router = require("router");
+const socketio = require("socket.io");
+const toobusy = require("toobusy-js");
+const nova = require("nova-base");
+const RouteController_1 = require("./RouteController");
+const SocketListener_1 = require("./SocketListener");
+const SocketNotifier_1 = require("./SocketNotifier");
+const util_1 = require("./util");
+const firsthandler_1 = require("./routing/firsthandler");
+const finalhandler_1 = require("./routing/finalhandler");
 // MODULE VARIABLES
 // =================================================================================================
 const ERROR_EVENT = 'error';

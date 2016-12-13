@@ -2,21 +2,21 @@
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator.throw(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
         function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments)).next());
     });
 };
 // IMPORTS
 // =================================================================================================
-const nova_base_1 = require('nova-base');
-const accepts = require('accepts');
-const typeIs = require('type-is');
-const bodyParser = require('body-parser');
-const multer = require('multer');
-const toobusy = require('toobusy-js');
-const index_1 = require('./../index');
-const util_1 = require('./util');
+const nova_base_1 = require("nova-base");
+const accepts = require("accepts");
+const typeIs = require("type-is");
+const bodyParser = require("body-parser");
+const multer = require("multer");
+const toobusy = require("toobusy-js");
+const index_1 = require("./../index");
+const util_1 = require("./util");
 // MODULE VARIABLES
 // =================================================================================================
 const DEFAULT_JSON_PARSER = bodyParser.json();

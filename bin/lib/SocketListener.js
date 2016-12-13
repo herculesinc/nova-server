@@ -1,6 +1,6 @@
 "use strict";
-const toobusy = require('toobusy-js');
-const nova = require('nova-base');
+const toobusy = require("toobusy-js");
+const nova = require("nova-base");
 // MODULE VARIABLES
 // =================================================================================================
 exports.symSocketAuthData = Symbol();

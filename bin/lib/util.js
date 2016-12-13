@@ -1,8 +1,8 @@
 "use strict";
 // IMPORTS
 // =================================================================================================
-const proxyaddr = require('proxy-addr');
-const nova_base_1 = require('nova-base');
+const proxyaddr = require("proxy-addr");
+const nova_base_1 = require("nova-base");
 // AUTH
 // =================================================================================================
 function parseAuthHeader(header) {

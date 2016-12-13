@@ -1,8 +1,8 @@
 "use strict";
 // IMPORTS
 // ================================================================================================
-const toobusy = require('toobusy-js');
-const Application_1 = require('./lib/Application');
+const toobusy = require("toobusy-js");
+const Application_1 = require("./lib/Application");
 // MODULE VARIABLES
 // =================================================================================================
 exports.defaults = {
@@ -36,11 +36,11 @@ function configure(setting, config) {
 exports.configure = configure;
 // RE-EXPORTS
 // =================================================================================================
-var RouteController_1 = require('./lib/RouteController');
+var RouteController_1 = require("./lib/RouteController");
 exports.RouteController = RouteController_1.RouteController;
-var SocketListener_1 = require('./lib/SocketListener');
+var SocketListener_1 = require("./lib/SocketListener");
 exports.SocketListener = SocketListener_1.SocketListener;
-var nova_base_1 = require('nova-base');
+var nova_base_1 = require("nova-base");
 exports.validate = nova_base_1.validate;
 exports.Exception = nova_base_1.Exception;
 exports.util = nova_base_1.util;

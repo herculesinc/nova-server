@@ -1,12 +1,12 @@
 "use strict";
 // IMPORTS
 // =================================================================================================
-const url = require('url');
-const qs = require('querystring');
-const proxyaddr = require('proxy-addr');
-const onHeaders = require('on-headers');
-const nova_base_1 = require('nova-base');
-const util_1 = require('./../util');
+const url = require("url");
+const qs = require("querystring");
+const proxyaddr = require("proxy-addr");
+const onHeaders = require("on-headers");
+const nova_base_1 = require("nova-base");
+const util_1 = require("./../util");
 // MODULE VARIABLES
 // =================================================================================================
 const headers = {

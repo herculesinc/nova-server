@@ -1,6 +1,6 @@
 "use strict";
-const onFinished = require('on-finished');
-const nova_base_1 = require('nova-base');
+const onFinished = require("on-finished");
+const nova_base_1 = require("nova-base");
 // FINAL HANDLER
 // =================================================================================================
 function finalhandler(request, response, onerror) {

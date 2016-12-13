@@ -1,5 +1,5 @@
 "use strict";
-const nova_base_1 = require('nova-base');
+const nova_base_1 = require("nova-base");
 // NOTIFIER CLASS
 // ================================================================================================
 class SocketNotifier {
