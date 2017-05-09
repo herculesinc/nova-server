@@ -66,21 +66,29 @@ class SocketListener {
         const executor = new nova.Executor(this.context, config.action, config.adapter, options);
         // build and return the handler
         return function (data, callback) {
-            // TODO: handle case when callback is undefined
             // check if the server is too busy
             if (toobusy()) {
                 const error = new nova.TooBusyError();
                 setImmediate(onerror, error);
-                return callback(error);
+                if (callback) {
+                    callback(error);
+                }
+                return;
             }
             // build inputs and run the executor
             const inputs = Object.assign({}, config.defaults, data);
             const authData = socket[exports.symSocketAuthData];
             executor.execute(inputs, authData)
-                .then((result) => callback(undefined))
+                .then((result) => {
+                if (callback) {
+                    callback(undefined);
+                }
+            })
                 .catch((error) => {
                 setImmediate(onerror, error);
-                callback(error);
+                if (callback) {
+                    callback(error);
+                }
             });
         };
     }

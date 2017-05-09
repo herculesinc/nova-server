@@ -108,7 +108,11 @@ export class SocketListener {
             const inputs = Object.assign({}, config.defaults, data);
             const authData = socket[symSocketAuthData];
             executor.execute(inputs, authData)
-                .then((result) => callback(undefined))
+                .then((result) => {
+                    if (callback) {
+                        callback(undefined);
+                    }
+                })
                 .catch((error) => {
                     setImmediate(onerror, error);
                     if (callback) {
