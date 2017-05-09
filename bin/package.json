@@ -1,6 +1,6 @@
 {
   "name": "nova-server",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "description": "Action-based Web API framework written in TypeScript",
   "keywords": [
     "nova",
@@ -28,13 +28,13 @@
   },
   "dependencies": {
     "accepts": "1.3.x",
-    "body-parser": "1.15.x",
-    "multer": "1.2.x",
+    "body-parser": "1.16.x",
+    "multer": "1.3.x",
     "nova-base": "0.7.x",
     "on-finished": "2.3.x",
     "on-headers": "1.0.x",
     "proxy-addr": "1.1.x",
-    "router": "1.1.x",
+    "router": "1.2.x",
     "socket.io": "1.7.x",
     "toobusy-js": "0.5.x",
     "type-is": "1.6.x"

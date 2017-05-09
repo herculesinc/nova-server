@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const toobusy = require("toobusy-js");
 const nova = require("nova-base");
 // MODULE VARIABLES
@@ -65,6 +66,7 @@ class SocketListener {
         const executor = new nova.Executor(this.context, config.action, config.adapter, options);
         // build and return the handler
         return function (data, callback) {
+            // TODO: handle case when callback is undefined
             // check if the server is too busy
             if (toobusy()) {
                 const error = new nova.TooBusyError();

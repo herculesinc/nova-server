@@ -98,7 +98,10 @@ export class SocketListener {
             if (toobusy()) {
                 const error = new nova.TooBusyError();
                 setImmediate(onerror, error);
-                return callback(error);
+                if (callback) {
+                    callback(error);
+                }
+                return;
             }
 
             // build inputs and run the executor
@@ -108,7 +111,9 @@ export class SocketListener {
                 .then((result) => callback(undefined))
                 .catch((error) => {
                     setImmediate(onerror, error);
-                    callback(error);
+                    if (callback) {
+                        callback(error);
+                    }
                 });
         }
     }
