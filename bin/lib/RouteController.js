@@ -166,7 +166,7 @@ class RouteController {
                     // build inputs object
                     let inputs;
                     if (config.body && config.body.type === 'files') {
-                        inputs = Object.assign({}, config.defaults, request.query, request.params, { files: request.files });
+                        inputs = Object.assign({}, config.defaults, request.query, request.params, request.body, { files: request.files });
                     }
                     else {
                         const bodyField = config.body && config.body.mapTo;
