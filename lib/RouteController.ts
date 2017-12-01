@@ -75,6 +75,7 @@ interface RequestBodyOptions {
 interface JsonBodyOptions extends RequestBodyOptions {
     limit?      : number;
     mapTo?      : string;
+    verify?     : (request: Request, response: Response, body: Buffer, encoding: string) => void;
 }
 
 interface FileBodyOptions extends RequestBodyOptions {

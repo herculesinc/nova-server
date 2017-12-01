@@ -100,6 +100,7 @@ declare module "nova-server" {
         type        : 'json';
         mapTo?      : string;
         limit?      : number;
+        verify?     : (request: Request, response: Response, body: Buffer, encoding: string) => void;
     }
 
     export interface FileBodyOptions {
