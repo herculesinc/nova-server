@@ -408,3 +408,17 @@ function buildExecutorMap<V,T>(config: EndpointConfig<V,T>, context: ExecutorCon
 
     return executorMap;
 }
+
+
+function parseRequest(request: Request) {
+
+    const authHeader = request.headers['authorization'] || request.headers['Authorization'];
+    return {
+        id      : '',
+        name    : request.method + ' ' + request.path,
+        url     : request.url,
+        ip      : request.ip,
+        auth    : authHeader ? parseAuthHeader(authHeader) : undefined,
+        inputs  : undefined
+    };
+}

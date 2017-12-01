@@ -309,4 +309,15 @@ function buildExecutorMap(config, context, options) {
     }
     return executorMap;
 }
+function parseRequest(request) {
+    const authHeader = request.headers['authorization'] || request.headers['Authorization'];
+    return {
+        id: '',
+        name: request.method + ' ' + request.path,
+        url: request.url,
+        ip: request.ip,
+        auth: authHeader ? util_1.parseAuthHeader(authHeader) : undefined,
+        inputs: undefined
+    };
+}
 //# sourceMappingURL=RouteController.js.map
