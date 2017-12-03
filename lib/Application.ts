@@ -9,7 +9,7 @@ import * as toobusy from 'toobusy-js';
 import * as nova from 'nova-base';
 
 import { RouteController } from './RouteController';
-import { SocketListener, symSocketAuthData } from './SocketListener';
+import { SocketListener, symRequestorInfo } from './SocketListener';
 import { SocketNotifier } from './SocketNotifier';
 import { parseAuthHeader } from './util';
 import { firsthandler } from './routing/firsthandler';
@@ -162,12 +162,16 @@ export class Application extends events.EventEmitter {
                 const query = socket.handshake.query;
                 const authInputs = parseAuthHeader(query['authorization'] || query['Authorization']);
                 const authData = this.authExecutor.authenticator.decode(authInputs);
+                const requestor: nova.RequestorInfo = {
+                    ip  : socket.handshake.address,
+                    auth: authData
+                };
 
                 // run authentication executor and mark socket as authenticated
-                this.authExecutor.execute({ authenticator: this.context.authenticator }, authData)
+                this.authExecutor.execute({ authenticator: this.context.authenticator }, requestor)
                     .then((socketOwnerId) => {
                         socket.join(socketOwnerId, function() {
-                            socket[symSocketAuthData] = authData;
+                            socket[symRequestorInfo] = requestor;
                             next();
                         });
                     })

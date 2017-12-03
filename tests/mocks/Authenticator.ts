@@ -1,6 +1,6 @@
 // IMPORTS
 // =================================================================================================
-import { AuthInputs, Authenticator, ActionContext, validate } from 'nova-base';
+import { AuthInputs, Authenticator, ActionContext, RequestorInfo, validate } from 'nova-base';
 import { MockDao } from './Database';
 import { User, users } from './../data/users';
 
@@ -33,8 +33,9 @@ export const authenticator: Authenticator<Token, Token> = {
         }
     },
 
-    authenticate(this: ActionContext, token: Token, options: any): Promise<Token> {
+    authenticate(this: ActionContext, requestor: RequestorInfo, options: any): Promise<Token> {
         try {
+            let token = requestor.auth as Token;
             validate.authorized(token, 'Token is undefined');
             const user = USER_MAP[token.userId];
             validate.authorized(user, 'Invalid user');

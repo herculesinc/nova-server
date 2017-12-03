@@ -161,8 +161,6 @@ class RouteController {
                 try {
                     // remember current time
                     const timestamp = Date.now();
-                    // set up a flag to track whether is is an authenticated request or not
-                    let authenticated = false;
                     // build inputs object
                     let inputs;
                     if (config.body && config.body.type === 'files') {
@@ -183,21 +181,23 @@ class RouteController {
                         // if header is present, build and parse auth inputs
                         const authInputs = util_1.parseAuthHeader(authHeader);
                         nova_base_1.validate(executor.authenticator, 'Cannot authenticate: authenticator is undefined');
-                        requestor = executor.authenticator.decode(authInputs);
-                        authenticated = true;
+                        requestor = {
+                            ip: request.ip,
+                            auth: executor.authenticator.decode(authInputs)
+                        };
                     }
                     else {
                         // otherwise, set requestor to the IP address of the request
-                        requestor = request.ip;
+                        requestor = { ip: request.ip };
                     }
                     // execute the action
                     const result = yield executor.execute(inputs, requestor, timestamp);
                     // build response
                     if (config.response) {
                         let view;
-                        let viewer = authenticated
-                            ? executor.authenticator.toOwner(requestor)
-                            : requestor;
+                        let viewer = requestor.auth
+                            ? executor.authenticator.toOwner(requestor.auth)
+                            : requestor.ip;
                         if (typeof config.response === 'function') {
                             view = config.response(result, undefined, viewer, timestamp);
                         }

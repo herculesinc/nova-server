@@ -2,7 +2,7 @@
 // =================================================================================================
 import {
     Action, ActionAdapter, Executor, ExecutorContext, ExecutionOptions, AuthInputs, RateOptions,
-    DaoOptions, HttpStatusCode, Exception, validate, TooBusyError, UnsupportedMethodError, util
+    DaoOptions, HttpStatusCode, Exception, validate, TooBusyError, UnsupportedMethodError, util, RequestorInfo
 } from 'nova-base';
 import { Router, RequestHandler, Request, Response } from 'router';
 import * as accepts from 'accepts';
@@ -247,9 +247,6 @@ export class RouteController {
                 // remember current time
                 const timestamp = Date.now();
 
-                // set up a flag to track whether is is an authenticated request or not
-                let authenticated = false;
-
                 // build inputs object
                 let inputs: any;
                 if (config.body && config.body.type === 'files') {
@@ -266,18 +263,20 @@ export class RouteController {
                 validate.input(!selector || executor, `No actions found for the specified ${selector}`);
 
                 // check authorization header
-                let requestor: any;
+                let requestor: RequestorInfo;
                 const authHeader = request.headers['authorization'] || request.headers['Authorization'];
                 if (authHeader) {
                     // if header is present, build and parse auth inputs
                     const authInputs = parseAuthHeader(authHeader);
                     validate(executor.authenticator, 'Cannot authenticate: authenticator is undefined');
-                    requestor = executor.authenticator.decode(authInputs);
-                    authenticated = true;
+                    requestor = {
+                        ip  : request.ip,
+                        auth: executor.authenticator.decode(authInputs)
+                    };
                 }
                 else {
                     // otherwise, set requestor to the IP address of the request
-                    requestor = request.ip;
+                    requestor = { ip: request.ip };
                 }
 
                 // execute the action
@@ -286,9 +285,9 @@ export class RouteController {
                 // build response
                 if (config.response) {
                     let view: any;
-                    let viewer: string = authenticated
-                        ? executor.authenticator.toOwner(requestor)
-                        : requestor;
+                    let viewer: string = requestor.auth
+                        ? executor.authenticator.toOwner(requestor.auth)
+                        : requestor.ip;
 
                     if (typeof config.response === 'function') {
                         view = config.response(result, undefined, viewer, timestamp);

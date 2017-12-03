@@ -8,6 +8,7 @@ import { createApp } from './../index';
 import { Application, AppConfig } from '../lib/Application';
 import { RouteController, RouteConfig, EndpointConfig } from '../lib/RouteController';
 import { MockDao } from './mocks/Database';
+import { RequestorInfo } from 'nova-server';
 
 let app: Application;
 let router: RouteController;
@@ -22,9 +23,13 @@ let endpointConfig: EndpointConfig<any, any>;
 let fakeRequest: any;
 
 const daoOptions: DaoOptions = { startTransaction: true };
-const unauthRequester: string = '::ffff:127.0.0.1';
-const requester: any = { id: '12345', name: 'user' };
-const toOwnerResult: string = requester.id;
+const requestorIp: string = '::ffff:127.0.0.1';
+const requestor: any = { id: '12345', name: 'user' };
+const requestorInfo: RequestorInfo = {
+    ip  : requestorIp,
+    auth: requestor
+};
+const toOwnerResult: string = requestor.id;
 const actionResult: any = { results: 'action results' };
 const adapterResult: any = { results: 'adapter results' };
 const viewResult: any = { results: 'view results' };
@@ -53,9 +58,9 @@ describe('NOVA-SERVER -> RouteController;', () => {
         dao = new MockDao(daoOptions);
         database = { connect: sinon.stub().returns(Promise.resolve(dao)) };
         authenticator = {
-            decode      : sinon.stub().returns(requester),
+            decode      : sinon.stub().returns(requestor),
             toOwner     : sinon.stub().returns(toOwnerResult),
-            authenticate: sinon.stub().returns(Promise.resolve(requester))
+            authenticate: sinon.stub().returns(Promise.resolve(requestor))
         };
     });
 
@@ -1038,7 +1043,7 @@ function checkAuthenticatorCalls(shouldCall = true, options?) {
         });
 
         it('authenticator.authenticate should be called with right arguments', () => {
-            expect((authenticator.authenticate as any).firstCall.calledWithExactly(requester, options)).to.be.true;
+            expect((authenticator.authenticate as any).firstCall.calledWithExactly(requestorInfo, options)).to.be.true;
         });
     } else {
         it('authenticator.decode should be not called', () => {
@@ -1061,7 +1066,7 @@ function checkAdapterCalls(shouldHaveAuthData = true, data = {}) {
         it('adapter should be called with right arguments', () => {
             let args = Object.assign({}, defaultsData, data);
 
-            expect((endpointConfig.adapter as any).firstCall.calledWithExactly(args, requester)).to.be.true;
+            expect((endpointConfig.adapter as any).firstCall.calledWithExactly(args, requestor, requestorIp)).to.be.true;
         });
     } else {
         it('adapter should be called once', () => {
@@ -1071,7 +1076,7 @@ function checkAdapterCalls(shouldHaveAuthData = true, data = {}) {
         it('adapter should be called with right arguments', () => {
             let args = Object.assign({}, defaultsData, data);
 
-            expect((endpointConfig.adapter as any).firstCall.calledWithExactly(args, unauthRequester)).to.be.true;
+            expect((endpointConfig.adapter as any).firstCall.calledWithExactly(args, undefined, requestorIp)).to.be.true;
         });
     }
 }
@@ -1090,7 +1095,7 @@ function checkResponseCalls(shouldHaveAuthData = true) {
         expect(args[1]).to.be.undefined;
 
         if (shouldHaveAuthData) {
-            expect(args[2]).to.equal(requester.id);
+            expect(args[2]).to.equal(requestor.id);
         } else {
             expect(args[2]).to.not.be.empty;
             expect(args[2]).to.be.a('string');
