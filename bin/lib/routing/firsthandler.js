@@ -42,7 +42,17 @@ function firsthandler(name, version, options, logger) {
             request.query = parsedUrl.query;
         }
         // get IP address of the request
-        request.ip = proxyaddr(request, trustFunction);
+        const ip = proxyaddr(request, trustFunction);
+        if (typeof ip === 'string') {
+            if (ip === '::1') {
+                // localhost
+                request.ip = '127.0.0.1';
+            }
+            else {
+                const ipV4 = util_1.matchIpV4(ip);
+                request.ip = ipV4 ? ipV4 : ip;
+            }
+        }
         // continue to the next handler
         next();
     };

@@ -7,7 +7,7 @@ import * as proxyaddr from 'proxy-addr';
 import * as onHeaders from 'on-headers';
 import { Logger, util } from 'nova-base';
 import { WebServerConfig } from './../Application';
-import { compileTrust } from './../util';
+import { compileTrust, matchIpV4 } from './../util';
 
 // MODULE VARIABLES
 // =================================================================================================
@@ -52,7 +52,17 @@ export function firsthandler(name: string, version: string, options: WebServerCo
         }
 
         // get IP address of the request
-        request.ip = proxyaddr(request, trustFunction);
+        const ip: string = proxyaddr(request, trustFunction);
+        if (typeof ip === 'string') {
+            if (ip === '::1') {
+                // localhost
+                request.ip = '127.0.0.1';
+            }
+            else {
+                const ipV4 = matchIpV4(ip);
+                request.ip = ipV4 ? ipV4 : ip;
+            }
+        }
 
         // continue to the next handler
         next();

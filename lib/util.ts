@@ -3,6 +3,8 @@
 import * as proxyaddr from 'proxy-addr';
 import { AuthInputs, validate } from 'nova-base';
 
+const IPV4_REGEX =  /[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/;
+
 // AUTH
 // =================================================================================================
 export function parseAuthHeader(header: string): AuthInputs {
@@ -36,4 +38,12 @@ export function compileTrust (val: any) {
   }
 
   return proxyaddr.compile(val || []);
+}
+
+// IP PARSING
+// =================================================================================================
+export function matchIpV4(value: string): string {
+    if (!value) return undefined;
+    const result = value.match(IPV4_REGEX);
+    if (result) return result[0];
 }

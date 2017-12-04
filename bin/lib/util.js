@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // =================================================================================================
 const proxyaddr = require("proxy-addr");
 const nova_base_1 = require("nova-base");
+const IPV4_REGEX = /[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/;
 // AUTH
 // =================================================================================================
 function parseAuthHeader(header) {
@@ -36,4 +37,14 @@ function compileTrust(val) {
     return proxyaddr.compile(val || []);
 }
 exports.compileTrust = compileTrust;
+// IP PARSING
+// =================================================================================================
+function matchIpV4(value) {
+    if (!value)
+        return undefined;
+    const result = value.match(IPV4_REGEX);
+    if (result)
+        return result[0];
+}
+exports.matchIpV4 = matchIpV4;
 //# sourceMappingURL=util.js.map
