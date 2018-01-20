@@ -1,6 +1,6 @@
 {
   "name": "nova-server",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Action-based Web API framework written in TypeScript",
   "keywords": [
     "nova",
@@ -24,7 +24,7 @@
     "url": "https://github.com/herculesinc/nova-base.git"
   },
   "engines": {
-    "node": "8.9.x"
+    "node": "6.11.x"
   },
   "dependencies": {
     "accepts": "1.3.x",
