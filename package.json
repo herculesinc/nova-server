@@ -1,6 +1,6 @@
 {
   "name": "nova-server",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "Action-based Web API framework written in TypeScript",
   "keywords": [
     "nova",
@@ -30,7 +30,7 @@
     "accepts": "1.3.x",
     "body-parser": "1.18.x",
     "multer": "1.3.x",
-    "nova-base": "0.8.1",
+    "nova-base": "0.8.x",
     "on-finished": "2.3.x",
     "on-headers": "1.0.x",
     "proxy-addr": "2.0.x",
