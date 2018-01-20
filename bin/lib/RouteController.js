@@ -1,12 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 // IMPORTS
 // =================================================================================================
@@ -156,76 +148,74 @@ class RouteController {
         const selector = config.actions ? config.actions.selector : undefined;
         const executorMap = buildExecutorMap(config, this.context, options);
         // build endpoint handler
-        handlers.push(function (request, response, next) {
-            return __awaiter(this, void 0, void 0, function* () {
-                try {
-                    // remember current time
-                    const timestamp = Date.now();
-                    // build inputs object
-                    let inputs;
-                    if (config.body && config.body.type === 'files') {
-                        inputs = Object.assign({}, config.defaults, request.query, request.params, request.body, { files: request.files });
-                    }
-                    else {
-                        const bodyField = config.body && config.body.mapTo;
-                        const body = bodyField ? { [bodyField]: request.body } : request.body;
-                        inputs = Object.assign({}, config.defaults, request.query, request.params, body);
-                    }
-                    // get the executor
-                    const executor = executorMap.get(inputs[selector]);
-                    nova_base_1.validate.input(!selector || executor, `No actions found for the specified ${selector}`);
-                    // check authorization header
-                    let requestor;
-                    const authHeader = request.headers['authorization'] || request.headers['Authorization'];
-                    if (authHeader) {
-                        // if header is present, build and parse auth inputs
-                        const authInputs = util_1.parseAuthHeader(authHeader);
-                        nova_base_1.validate(executor.authenticator, 'Cannot authenticate: authenticator is undefined');
-                        requestor = {
-                            ip: request.ip,
-                            auth: executor.authenticator.decode(authInputs)
-                        };
-                    }
-                    else {
-                        // otherwise, set requestor to the IP address of the request
-                        requestor = { ip: request.ip };
-                    }
-                    // execute the action
-                    const result = yield executor.execute(inputs, requestor, timestamp);
-                    // build response
-                    if (config.response) {
-                        let view;
-                        let viewer = requestor.auth
-                            ? executor.authenticator.toOwner(requestor.auth)
-                            : requestor.ip;
-                        if (typeof config.response === 'function') {
-                            view = config.response(result, undefined, viewer, timestamp);
-                        }
-                        else {
-                            const viewBuilderOptions = (typeof config.response.options === 'function')
-                                ? config.response.options(inputs, result, viewer, timestamp)
-                                : config.response.options;
-                            view = config.response.view(result, viewBuilderOptions, viewer, timestamp);
-                        }
-                        if (!view)
-                            throw new nova_base_1.Exception('Resource not found', 404 /* NotFound */);
-                        if (typeof view !== 'object')
-                            throw new nova_base_1.Exception(`View for ${request.method} ${request.path} returned invalid value`);
-                        response.statusCode = 200 /* OK */;
-                        const body = JSON.stringify(view);
-                        response.setHeader('Content-Type', 'application/json; charset=utf-8');
-                        response.setHeader('Content-Length', Buffer.byteLength(body, 'utf8').toString(10));
-                        response.end(body, 'utf8');
-                    }
-                    else {
-                        response.statusCode = 204 /* NoContent */;
-                        response.end();
-                    }
+        handlers.push(async function (request, response, next) {
+            try {
+                // remember current time
+                const timestamp = Date.now();
+                // build inputs object
+                let inputs;
+                if (config.body && config.body.type === 'files') {
+                    inputs = Object.assign({}, config.defaults, request.query, request.params, request.body, { files: request.files });
                 }
-                catch (error) {
-                    next(error);
+                else {
+                    const bodyField = config.body && config.body.mapTo;
+                    const body = bodyField ? { [bodyField]: request.body } : request.body;
+                    inputs = Object.assign({}, config.defaults, request.query, request.params, body);
                 }
-            });
+                // get the executor
+                const executor = executorMap.get(inputs[selector]);
+                nova_base_1.validate.input(!selector || executor, `No actions found for the specified ${selector}`);
+                // check authorization header
+                let requestor;
+                const authHeader = request.headers['authorization'] || request.headers['Authorization'];
+                if (authHeader) {
+                    // if header is present, build and parse auth inputs
+                    const authInputs = util_1.parseAuthHeader(authHeader);
+                    nova_base_1.validate(executor.authenticator, 'Cannot authenticate: authenticator is undefined');
+                    requestor = {
+                        ip: request.ip,
+                        auth: executor.authenticator.decode(authInputs)
+                    };
+                }
+                else {
+                    // otherwise, set requestor to the IP address of the request
+                    requestor = { ip: request.ip };
+                }
+                // execute the action
+                const result = await executor.execute(inputs, requestor, timestamp);
+                // build response
+                if (config.response) {
+                    let view;
+                    let viewer = requestor.auth
+                        ? executor.authenticator.toOwner(requestor.auth)
+                        : requestor.ip;
+                    if (typeof config.response === 'function') {
+                        view = config.response(result, undefined, viewer, timestamp);
+                    }
+                    else {
+                        const viewBuilderOptions = (typeof config.response.options === 'function')
+                            ? config.response.options(inputs, result, viewer, timestamp)
+                            : config.response.options;
+                        view = config.response.view(result, viewBuilderOptions, viewer, timestamp);
+                    }
+                    if (!view)
+                        throw new nova_base_1.Exception('Resource not found', 404 /* NotFound */);
+                    if (typeof view !== 'object')
+                        throw new nova_base_1.Exception(`View for ${request.method} ${request.path} returned invalid value`);
+                    response.statusCode = 200 /* OK */;
+                    const body = JSON.stringify(view);
+                    response.setHeader('Content-Type', 'application/json; charset=utf-8');
+                    response.setHeader('Content-Length', Buffer.byteLength(body, 'utf8').toString(10));
+                    response.end(body, 'utf8');
+                }
+                else {
+                    response.statusCode = 204 /* NoContent */;
+                    response.end();
+                }
+            }
+            catch (error) {
+                next(error);
+            }
         });
         // return handlers
         return handlers;

@@ -23,7 +23,7 @@ let endpointConfig: EndpointConfig<any, any>;
 let fakeRequest: any;
 
 const daoOptions: DaoOptions = { startTransaction: true };
-const requestorIp: string = '::ffff:127.0.0.1';
+const requestorIp: string = '127.0.0.1';
 const requestor: any = { id: '12345', name: 'user' };
 const requestorInfo: RequestorInfo = {
     ip  : requestorIp,
