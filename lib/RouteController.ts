@@ -93,7 +93,7 @@ interface FileBodyOptions extends RequestBodyOptions {
 }
 
 interface MultipartBodyOptions extends RequestBodyOptions {
-    filesField?     : string;
+    mapFilesTo?     : string;
     storage?        : any;
     limits?: {
         fields?     : number;
@@ -269,7 +269,7 @@ export class RouteController {
                     inputs = Object.assign({}, config.defaults, request.query, request.params, request.body, { files: request.files });
                 }
                 else if (config.body && config.body.type === 'multipart') {
-                    const filesField = (config.body as MultipartBodyOptions).filesField;
+                    const filesField = (config.body as MultipartBodyOptions).mapFilesTo;
                     const files = filesField ? { [filesField]: request.files } : undefined;
                     inputs = Object.assign({}, config.defaults, request.query, request.params, files);
                 }
