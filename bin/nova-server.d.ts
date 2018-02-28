@@ -114,6 +114,7 @@ declare module "nova-server" {
     }
 
     export interface MultipartBodyOptions extends RequestBodyOptions {
+        type            : 'multipart';
         mapFilesTo?     : string;
         storage?        : any;
         limits?: {

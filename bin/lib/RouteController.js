@@ -174,7 +174,7 @@ class RouteController {
                     else if (config.body && config.body.type === 'multipart') {
                         const filesField = config.body.mapFilesTo;
                         const files = filesField ? { [filesField]: request.files } : undefined;
-                        inputs = Object.assign({}, config.defaults, request.query, request.params, files);
+                        inputs = Object.assign({}, config.defaults, request.query, request.params, request.body, files);
                     }
                     else {
                         const bodyField = config.body && config.body.mapTo;
