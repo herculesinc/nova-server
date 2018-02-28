@@ -31,6 +31,11 @@ const BODY_TYPE_CHECKERS = {
         return typeIs(request, ['multipart'])
             ? next()
             : next(new nova_base_1.Exception(`Only multipart body is supported for this request`, 415 /* UnsupportedContent */));
+    },
+    multipart: function (request, response, next) {
+        return typeIs(request, ['multipart'])
+            ? next()
+            : next(new nova_base_1.Exception(`Only multipart body is supported for this request`, 415 /* UnsupportedContent */));
     }
 };
 const ACCPET_TYPE_CHECKER = {
@@ -166,6 +171,11 @@ class RouteController {
                     if (config.body && config.body.type === 'files') {
                         inputs = Object.assign({}, config.defaults, request.query, request.params, request.body, { files: request.files });
                     }
+                    else if (config.body && config.body.type === 'multipart') {
+                        const filesField = config.body.filesField;
+                        const files = filesField ? { [filesField]: request.files } : undefined;
+                        inputs = Object.assign({}, config.defaults, request.query, request.params, files);
+                    }
                     else {
                         const bodyField = config.body && config.body.mapTo;
                         const body = bodyField ? { [bodyField]: request.body } : request.body;
@@ -244,6 +254,9 @@ function getTypeCheckers(config, expectsResponse) {
     else if (config.type === 'files') {
         checkers.push(BODY_TYPE_CHECKERS.files);
     }
+    else if (config.type === 'multipart') {
+        checkers.push(BODY_TYPE_CHECKERS.multipart);
+    }
     else {
         throw new TypeError(`Body type '${config.type}' is not supported`);
     }
@@ -282,6 +295,24 @@ function getBodyParser(config) {
                     const code = error.code;
                     if (typeof code === 'string' && code.startsWith('LIMIT')) {
                         error = new nova_base_1.Exception({ message: 'Upload failed', cause: error, status: 402 /* InvalidInputs */ });
+                    }
+                }
+                next(error);
+            });
+        };
+    }
+    else if (config.type === 'multipart') {
+        const bConfig = config;
+        const uploader = multer({
+            storage: bConfig.storage || multer.memoryStorage(),
+            limits: bConfig.limits
+        }).any();
+        return function (request, response, next) {
+            uploader(request, response, function (error) {
+                if (error) {
+                    const code = error.code;
+                    if (typeof code === 'string' && code.startsWith('LIMIT')) {
+                        error = new nova_base_1.Exception({ message: 'Request failed', cause: error, status: 402 /* InvalidInputs */ });
                     }
                 }
                 next(error);

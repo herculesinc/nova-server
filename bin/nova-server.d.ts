@@ -73,7 +73,7 @@ declare module "nova-server" {
             actionMap   : Iterable<[string, nova.Action<V,T>]>
         };
         response?       : ResponseOptions<T> | ViewBuilder<T>;
-        body?           : JsonBodyOptions | FileBodyOptions;
+        body?           : JsonBodyOptions | FileBodyOptions | MultipartBodyOptions;
         rate?           : nova.RateOptions;
         dao?            : nova.DaoOptions;
         auth?           : any;
@@ -93,7 +93,7 @@ declare module "nova-server" {
     }
 
     export interface RequestBodyOptions {
-        type        : 'json' | 'files';
+        type        : 'json' | 'files' | 'multipart';
     }
 
     export interface JsonBodyOptions {
@@ -110,6 +110,17 @@ declare module "nova-server" {
         limits?: {
             count   : number;
             size    : number;
+        };
+    }
+
+    export interface MultipartBodyOptions extends RequestBodyOptions {
+        filesField?     : string;
+        storage?        : any;
+        limits?: {
+            fields?     : number;
+            fieldSize?  : number;
+            files?      : number;
+            fileSize?   : number;
         };
     }
 

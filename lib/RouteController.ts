@@ -28,6 +28,11 @@ const BODY_TYPE_CHECKERS = {
         return typeIs(request, ['multipart'])
             ? next()
             : next(new Exception(`Only multipart body is supported for this request`, HttpStatusCode.UnsupportedContent));
+    },
+    multipart: function(request: Request, response: Response, next: Function) {
+        return typeIs(request, ['multipart'])
+            ? next()
+            : next(new Exception(`Only multipart body is supported for this request`, HttpStatusCode.UnsupportedContent));
     }
 };
 
@@ -62,28 +67,39 @@ export interface EndpointConfig<V,T> {
         actionMap   : Iterable<[string, Action<V,T>]>;
     };
     response?       : ResponseOptions<T> | ViewBuilder<T>;
-    body?           : JsonBodyOptions | FileBodyOptions;
+    body?           : JsonBodyOptions | FileBodyOptions | MultipartBodyOptions;
     rate?           : RateOptions;
     dao?            : DaoOptions;
     auth?           : any;
 }
 
 interface RequestBodyOptions {
-    type        : 'json' | 'files';
+    type            : 'json' | 'files' | 'multipart';
 }
 
 interface JsonBodyOptions extends RequestBodyOptions {
-    limit?      : number;
-    mapTo?      : string;
-    verify?     : (request: Request, response: Response, body: Buffer, encoding: string) => void;
+    limit?          : number;
+    mapTo?          : string;
+    verify?         : (request: Request, response: Response, body: Buffer, encoding: string) => void;
 }
 
 interface FileBodyOptions extends RequestBodyOptions {
-    field       : string;
-    storage?    : any;
+    field           : string;
+    storage?        : any;
     limits?: {
-        count   : number;
-        size    : number;
+        count       : number;
+        size        : number;
+    };
+}
+
+interface MultipartBodyOptions extends RequestBodyOptions {
+    filesField?     : string;
+    storage?        : any;
+    limits?: {
+        fields?     : number;
+        fieldSize?  : number;
+        files?      : number;
+        fileSize?   : number;
     };
 }
 
@@ -252,6 +268,11 @@ export class RouteController {
                 if (config.body && config.body.type === 'files') {
                     inputs = Object.assign({}, config.defaults, request.query, request.params, request.body, { files: request.files });
                 }
+                else if (config.body && config.body.type === 'multipart') {
+                    const filesField = (config.body as MultipartBodyOptions).filesField;
+                    const files = filesField ? { [filesField]: request.files } : undefined;
+                    inputs = Object.assign({}, config.defaults, request.query, request.params, files);
+                }
                 else {
                     const bodyField = config.body && (config.body as JsonBodyOptions).mapTo;
                     const body = bodyField ? { [bodyField]: request.body } : request.body;
@@ -335,6 +356,9 @@ function getTypeCheckers(config: JsonBodyOptions | FileBodyOptions, expectsRespo
     else if (config.type === 'files') {
         checkers.push(BODY_TYPE_CHECKERS.files);
     }
+    else if (config.type === 'multipart') {
+        checkers.push(BODY_TYPE_CHECKERS.multipart);
+    }
     else {
         throw new TypeError(`Body type '${config.type}' is not supported`);
     }
@@ -377,6 +401,26 @@ function getBodyParser(config: JsonBodyOptions | FileBodyOptions): RequestHandle
                     const code: string = (error as any).code;
                     if (typeof code === 'string' && code.startsWith('LIMIT')) {
                         error = new Exception({ message: 'Upload failed', cause: error, status: HttpStatusCode.InvalidInputs });
+                    }
+                }
+                next(error);
+            });
+        };
+    }
+    else if (config.type === 'multipart') {
+        const bConfig = config as MultipartBodyOptions;
+
+        const uploader = multer({
+            storage : bConfig.storage || multer.memoryStorage(),
+            limits  : bConfig.limits
+        }).any();
+
+        return function(request, response, next) {
+            uploader(request, response, function (error) {
+                if (error) {
+                    const code: string = (error as any).code;
+                    if (typeof code === 'string' && code.startsWith('LIMIT')) {
+                        error = new Exception({ message: 'Request failed', cause: error, status: HttpStatusCode.InvalidInputs });
                     }
                 }
                 next(error);
